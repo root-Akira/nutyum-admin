@@ -54,7 +54,7 @@ export default function VibesList() {
     setSaving(true)
     try {
       const blob = new Blob([JSON.stringify(updated, null, 2)], { type: 'application/json' })
-      const { error } = await supabase.storage.from('product-images').upload(STORAGE_KEY, blob, { upsert: true })
+      const { error } = await supabase.storage.from('product-images').upload(STORAGE_KEY, blob, { upsert: true, cacheControl: '0' })
       if (error) throw error
       setVibes(updated)
     } catch (e) {
