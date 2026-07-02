@@ -1,10 +1,12 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { supabaseAdmin as supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { StatusBadge } from '@/components/ui/badge'
 import { CardSkeleton } from '@/components/ui/skeleton'
 import { ArrowLeft, Mail, Phone, MapPin } from 'lucide-react'
+
+const API_URL = import.meta.env.VITE_SUPABASE_URL
 
 export default function CustomerDetail() {
   const { id } = useParams()
@@ -13,9 +15,37 @@ export default function CustomerDetail() {
   const { data: customer, isLoading } = useQuery({
     queryKey: ['customer', id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('users').select('*').eq('id', id!).single()
-      if (error) throw error
-      return data
+      const res = await fetch(`${API_URL}/auth/v1/admin/users/${id}`, {
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_SERVICE_ROLE,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_SERVICE_ROLE}`,
+        },
+      })
+      if (!res.ok) throw new Error('Failed to fetch user')
+      const user = await res.json()
+
+      let orderCount = 0
+      let totalSpent = 0
+      try {
+        const { data: ordersData } = await supabaseAdmin
+          .from('orders')
+          .select('total')
+          .eq('user_id', id!)
+        if (ordersData) {
+          orderCount = ordersData.length
+          totalSpent = ordersData.reduce((sum, o) => sum + Number(o.total || 0), 0)
+        }
+      } catch { /* orders table may not exist */ }
+
+      return {
+        id: user.id,
+        email: user.email || '',
+        name: user.user_metadata?.name || user.email?.split('@')[0] || 'Unnamed',
+        phone: user.user_metadata?.phone || user.phone || '',
+        order_count: orderCount,
+        total_spent: totalSpent,
+        created_at: user.created_at,
+      }
     },
     enabled: !!id,
   })
@@ -23,7 +53,7 @@ export default function CustomerDetail() {
   const { data: orders } = useQuery({
     queryKey: ['customer-orders', id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('orders').select('*').eq('user_id', id!).order('created_at', { ascending: false })
+      const { data, error } = await supabaseAdmin.from('orders').select('*').eq('user_id', id!).order('created_at', { ascending: false })
       if (error) throw error
       return data || []
     },
@@ -33,7 +63,7 @@ export default function CustomerDetail() {
   const { data: addresses } = useQuery({
     queryKey: ['customer-addresses', id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('addresses').select('*').eq('user_id', id!)
+      const { data, error } = await supabaseAdmin.from('addresses').select('*').eq('user_id', id!)
       if (error) throw error
       return data || []
     },
@@ -51,18 +81,18 @@ export default function CustomerDetail() {
 
       <div className="space-y-6">
         <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-5">
-          <h2 className="text-lg font-semibold text-[#173D22]">{customer.name || 'Unnamed'}</h2>
+          <h2 className="text-lg font-semibold text-[#173D22]">{customer.name}</h2>
           <div className="flex flex-wrap gap-4 mt-3 text-sm text-[#4C5A48]">
             <span className="flex items-center gap-1.5"><Mail size={14} /> {customer.email}</span>
             {customer.phone && <span className="flex items-center gap-1.5"><Phone size={14} /> {customer.phone}</span>}
           </div>
           <div className="flex gap-4 mt-4">
             <div className="rounded-lg bg-[rgba(23,61,34,0.06)] px-4 py-3 text-center">
-              <p className="text-2xl font-bold text-[#173D22]">{customer.order_count || 0}</p>
+              <p className="text-2xl font-bold text-[#173D22]">{customer.order_count}</p>
               <p className="text-xs text-[#4C5A48]">Orders</p>
             </div>
             <div className="rounded-lg bg-[rgba(23,61,34,0.06)] px-4 py-3 text-center">
-              <p className="text-2xl font-bold text-[#173D22]">{formatCurrency(customer.total_spent || 0)}</p>
+              <p className="text-2xl font-bold text-[#173D22]">{formatCurrency(customer.total_spent)}</p>
               <p className="text-xs text-[#4C5A48]">Total Spent</p>
             </div>
             <div className="rounded-lg bg-[rgba(23,61,34,0.06)] px-4 py-3 text-center">
@@ -76,7 +106,7 @@ export default function CustomerDetail() {
           <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-5">
             <h3 className="text-sm font-semibold text-[#173D22] mb-3 flex items-center gap-2"><MapPin size={16} /> Addresses</h3>
             <div className="space-y-3">
-              {addresses.map((addr) => (
+              {addresses.map((addr: any) => (
                 <div key={addr.id} className="text-sm text-[#4C5A48] p-3 rounded-lg bg-[rgba(23,61,34,0.03)]">
                   <p className="font-medium text-[#173D22]">{addr.name}</p>
                   <p>{addr.street}, {addr.city}, {addr.state} — {addr.pincode}</p>
@@ -93,7 +123,7 @@ export default function CustomerDetail() {
             <p className="text-sm text-[#4C5A48]">No orders yet.</p>
           ) : (
             <div className="space-y-2">
-              {orders.map((order) => (
+              {orders.map((order: any) => (
                 <div
                   key={order.id}
                   onClick={() => navigate(`/orders/${order.id}`)}

@@ -1,12 +1,25 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { supabaseAdmin as supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { Table, TableHead, TableHeaderCell, TableBody, TableRow, TableCell } from '@/components/ui/table'
 import { StatusBadge } from '@/components/ui/badge'
 import { TableSkeleton } from '@/components/ui/skeleton'
 import { Search, Mail, Phone } from 'lucide-react'
+
+interface CustomerRow {
+  id: string
+  email: string
+  name: string
+  phone: string
+  order_count: number
+  total_spent: number
+  created_at: string
+  is_blocked: boolean
+}
+
+const API_URL = import.meta.env.VITE_SUPABASE_URL
 
 export default function CustomerList() {
   const [search, setSearch] = useState('')
@@ -14,13 +27,50 @@ export default function CustomerList() {
   const { data: customers, isLoading } = useQuery({
     queryKey: ['customers', search],
     queryFn: async () => {
-      let query = supabase.from('users').select('*').order('created_at', { ascending: false })
+      const res = await fetch(`${API_URL}/auth/v1/admin/users`, {
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_SERVICE_ROLE,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_SERVICE_ROLE}`,
+        },
+      })
+      if (!res.ok) throw new Error('Failed to fetch users')
+      const body = await res.json()
+      const users: any[] = body.users || []
+
+      // Get order stats per user (if orders table exists)
+      let orderCounts: Record<string, number> = {}
+      let spentByUser: Record<string, number> = {}
+      try {
+        const { data: ordersData } = await supabaseAdmin.from('orders').select('user_id, total')
+        if (ordersData) {
+          for (const o of ordersData) {
+            orderCounts[o.user_id] = (orderCounts[o.user_id] || 0) + 1
+            spentByUser[o.user_id] = (spentByUser[o.user_id] || 0) + Number(o.total || 0)
+          }
+        }
+      } catch { /* orders table may not exist yet */ }
+
+      let rows: CustomerRow[] = users.map(u => ({
+        id: u.id,
+        email: u.email || '',
+        name: u.user_metadata?.name || u.email?.split('@')[0] || 'Unnamed',
+        phone: u.user_metadata?.phone || u.phone || '',
+        order_count: orderCounts[u.id] || 0,
+        total_spent: spentByUser[u.id] || 0,
+        created_at: u.created_at,
+        is_blocked: u.banned_until ? new Date(u.banned_until) > new Date() : false,
+      }))
+
       if (search) {
-        query = query.or(`email.ilike.%${search}%,name.ilike.%${search}%,phone.ilike.%${search}%`)
+        const q = search.toLowerCase()
+        rows = rows.filter(r =>
+          r.name.toLowerCase().includes(q) ||
+          r.email.toLowerCase().includes(q) ||
+          r.phone.includes(q)
+        )
       }
-      const { data, error } = await query
-      if (error) throw error
-      return data || []
+
+      return rows.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     },
   })
 
@@ -60,7 +110,7 @@ export default function CustomerList() {
               <TableRow key={customer.id}>
                 <TableCell>
                   <Link to={`/customers/${customer.id}`} className="font-medium text-[#173D22] hover:underline">
-                    {customer.name || 'Unnamed'}
+                    {customer.name}
                   </Link>
                 </TableCell>
                 <TableCell>
@@ -69,8 +119,8 @@ export default function CustomerList() {
                     {customer.phone && <span className="flex items-center gap-1 text-xs text-[#4C5A48]"><Phone size={12} /> {customer.phone}</span>}
                   </div>
                 </TableCell>
-                <TableCell>{customer.order_count || 0}</TableCell>
-                <TableCell className="font-medium">{formatCurrency(customer.total_spent || 0)}</TableCell>
+                <TableCell>{customer.order_count}</TableCell>
+                <TableCell className="font-medium">{formatCurrency(customer.total_spent)}</TableCell>
                 <TableCell className="text-xs text-[#4C5A48]">{formatDateTime(customer.created_at)}</TableCell>
                 <TableCell>{customer.is_blocked ? <StatusBadge status="cancelled" /> : <StatusBadge status="active" />}</TableCell>
               </TableRow>

@@ -133,6 +133,27 @@ CREATE TABLE IF NOT EXISTS site_settings (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Categories table
+CREATE TABLE IF NOT EXISTS categories (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE,
+  slug TEXT NOT NULL UNIQUE,
+  description TEXT,
+  image_url TEXT,
+  "order" INTEGER NOT NULL DEFAULT 0,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Insert default categories
+INSERT INTO categories (name, slug, description, "order") VALUES
+  ('Classic', 'classic', 'Traditional roasted makhana', 1),
+  ('Spicy', 'spicy', 'Bold heat and bold flavor', 2),
+  ('Sweet', 'sweet', 'Decadent chocolate and sweet coatings', 3),
+  ('Gift Pack', 'gift-pack', 'Curated assortments for gifting', 4)
+ON CONFLICT (slug) DO NOTHING;
+
 -- Insert default site settings
 INSERT INTO site_settings (store_name, store_email, store_phone, store_address)
 VALUES ('Nutyum', 'hello@nutyum.com', '', '')
@@ -160,3 +181,66 @@ CREATE POLICY "Admin full access on banners" ON banners FOR ALL TO authenticated
 CREATE POLICY "Admin full access on cms_pages" ON cms_pages FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Admin full access on shipping_zones" ON shipping_zones FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Admin full access on site_settings" ON site_settings FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Admin full access on categories" ON categories FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Users table (synced from auth.users)
+CREATE TABLE IF NOT EXISTS public.users (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT,
+  name TEXT,
+  phone TEXT,
+  is_blocked BOOLEAN DEFAULT false,
+  order_count INTEGER DEFAULT 0,
+  total_spent DECIMAL(10,2) DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Admin full access on users" ON public.users FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Trigger function to sync auth.users -> public.users
+CREATE OR REPLACE FUNCTION public.sync_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER SET search_path = ''
+AS $$
+BEGIN
+  INSERT INTO public.users (id, email, name, phone, created_at, updated_at)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    NEW.raw_user_meta_data->>'name',
+    NEW.raw_user_meta_data->>'phone',
+    NEW.created_at,
+    NEW.updated_at
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    email = EXCLUDED.email,
+    name = EXCLUDED.name,
+    phone = EXCLUDED.phone,
+    updated_at = EXCLUDED.updated_at;
+  RETURN NEW;
+END;
+$$;
+
+-- Trigger on auth.users
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT OR UPDATE ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.sync_user();
+
+-- Backfill existing users
+INSERT INTO public.users (id, email, name, phone, created_at, updated_at)
+SELECT
+  id,
+  email,
+  raw_user_meta_data->>'name',
+  raw_user_meta_data->>'phone',
+  created_at,
+  updated_at
+FROM auth.users
+ON CONFLICT (id) DO NOTHING;
+
+-- Add admin_reply column to reviews (for admin reply feature)
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS admin_reply TEXT;

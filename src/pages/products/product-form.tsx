@@ -39,6 +39,29 @@ export default function ProductForm() {
     enabled: isEdit,
   })
 
+  const { data: categories = [], isLoading: loadingCats } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      let stored: { name: string; slug: string }[] = []
+      try {
+        const { data } = await supabase.storage.from('product-images').download('config/categories.json')
+        if (data) {
+          const text = await data.text()
+          stored = JSON.parse(text)
+        }
+      } catch { /* not yet stored */ }
+
+      return stored.length > 0
+        ? stored
+        : [
+            { name: 'Classic', slug: 'classic' },
+            { name: 'Spicy', slug: 'spicy' },
+            { name: 'Sweet', slug: 'sweet' },
+            { name: 'Gift Pack', slug: 'gift-pack' },
+          ]
+    },
+  })
+
   useEffect(() => {
     if (product) {
       setForm({
@@ -137,11 +160,8 @@ export default function ProductForm() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select label="Category" value={form.category} onChange={e => update('category', e.target.value)}
               options={[
-                { value: '', label: 'Select category' },
-                { value: 'classic', label: 'Classic' },
-                { value: 'spicy', label: 'Spicy' },
-                { value: 'sweet', label: 'Sweet' },
-                { value: 'gift', label: 'Gift' },
+                { value: '', label: loadingCats ? 'Loading...' : 'Select category' },
+                ...categories.map(c => ({ value: c.slug, label: c.name })),
               ]}
             />
             <Input label="Price (₹)" type="number" value={form.price} onChange={e => update('price', Number(e.target.value))} />

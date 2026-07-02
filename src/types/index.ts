@@ -46,6 +46,11 @@ export interface Category {
   name: string
   slug: string
   description?: string
+  image_url?: string
+  order: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
 }
 
 export interface Order {
