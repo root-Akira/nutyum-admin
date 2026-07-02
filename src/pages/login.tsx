@@ -25,10 +25,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-[#FAF7EE]">
       <div className="rounded-2xl bg-[#FFFEFB] p-8 max-w-sm w-full shadow-lg border border-[rgba(23,61,34,0.08)]">
         <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-xl bg-[#173D22] flex items-center justify-center text-white text-xl font-bold mx-auto mb-4">
-            N
-          </div>
-          <h1 className="text-xl font-semibold text-[#173D22]">Nutyum Admin</h1>
+          <img src="/logo.png" alt="Nutyum" className="h-12 w-auto object-contain mx-auto mb-3" />
           <p className="text-sm text-[#4C5A48] mt-1">Sign in to manage your store</p>
         </div>
 

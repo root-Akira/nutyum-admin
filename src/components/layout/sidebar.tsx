@@ -49,13 +49,11 @@ export function Sidebar({ onSignOut, open, onClose }: SidebarProps) {
           open ? 'translate-x-0' : '-translate-x-full'
         } lg:translate-x-0`}
       >
-        <div className="flex items-center gap-3 px-5 h-16 border-b border-[rgba(255,255,255,0.1)] shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-[#E0961A] flex items-center justify-center text-white text-[10px] font-bold">
-              N
-            </div>
-            <span className="font-bold text-sm text-white">Nutyum Admin</span>
+        <div className="flex flex-col items-center gap-1 px-5 py-4 border-b border-[rgba(255,255,255,0.1)] shrink-0">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white">
+            <img src="/logo.png" alt="Nutyum" className="h-10 w-auto object-contain" />
           </div>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[rgba(255,255,255,0.45)]">Admin Panel</span>
         </div>
 
         <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-5">
