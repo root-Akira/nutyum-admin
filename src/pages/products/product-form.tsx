@@ -12,6 +12,7 @@ const defaultProduct = {
   price: 0, images: [] as string[],
   is_new: false, is_best_seller: false, is_coming_soon: false,
   nutritional_info: '', ingredients: [] as string[],
+  vibes: [] as string[],
 }
 
 function makeSlug(name: string) {
@@ -62,6 +63,29 @@ export default function ProductForm() {
     },
   })
 
+  const { data: vibes = [] } = useQuery({
+    queryKey: ['vibes'],
+    queryFn: async () => {
+      let stored: string[] = []
+      try {
+        const { data } = await supabase.storage.from('product-images').download('config/vibes.json')
+        if (data) {
+          const text = await data.text()
+          stored = JSON.parse(text)
+        }
+      } catch { /* not yet stored */ }
+
+      return stored.length > 0
+        ? stored
+        : [
+            'A Sweet Treat', 'Evening Munch', 'High Protein', 'Guilt-Free',
+            'Crunchy & Light', 'Over Popcorn', 'Perfect Gift', 'Savory Twist',
+            'Classic Flavors', 'Whole Grain', 'Focused & Clear', 'Bold Heat',
+            'Lightly Salted', 'Snack Ritual', 'Calm & Cozy', 'Zero Guilt',
+          ]
+    },
+  })
+
   useEffect(() => {
     if (product) {
       setForm({
@@ -76,6 +100,7 @@ export default function ProductForm() {
         is_coming_soon: product.is_coming_soon ?? false,
         nutritional_info: product.nutritional_info || '',
         ingredients: product.ingredients || [],
+        vibes: product.vibes || [],
       })
     }
   }, [product])
@@ -216,6 +241,39 @@ export default function ProductForm() {
             <Textarea label="Nutritional Info" value={form.nutritional_info} onChange={e => update('nutritional_info', e.target.value)} rows={2} />
           </div>
         </details>
+
+        <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-6 space-y-4">
+          <h2 className="text-sm font-semibold text-[#173D22]">Vibes / Tags</h2>
+          <p className="text-xs text-[#4C5A48]">Select the vibes that match this product.</p>
+          <div className="flex flex-wrap gap-2">
+            {vibes.map((vibe) => {
+              const checked = form.vibes.includes(vibe)
+              return (
+                <label
+                  key={vibe}
+                  className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
+                    checked
+                      ? 'border-[#173D22] bg-[#173D22] text-white'
+                      : 'border-[rgba(23,61,34,0.2)] bg-white text-[#4C5A48] hover:border-[#173D22]'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => {
+                      update('vibes', checked
+                        ? form.vibes.filter(v => v !== vibe)
+                        : [...form.vibes, vibe]
+                      )
+                    }}
+                    className="hidden"
+                  />
+                  {vibe}
+                </label>
+              )
+            })}
+          </div>
+        </div>
 
         <div className="flex justify-end gap-3 pb-10">
           <Button variant="secondary" onClick={() => navigate('/products')}>Cancel</Button>

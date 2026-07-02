@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, Package, ShoppingCart, Users, Star, Ticket,
-  Image as ImageIcon, FileText, Tag, Truck, CreditCard, Settings, LogOut,
+  Image as ImageIcon, FileText, Tag, Tags, Truck, CreditCard, Settings, LogOut,
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -26,6 +26,7 @@ const navGroups = [
     label: 'Content',
     links: [
       { to: '/cms/categories', label: 'Categories', icon: Tag },
+      { to: '/cms/vibes', label: 'Vibes', icon: Tags },
       { to: '/cms/banners', label: 'Banners', icon: ImageIcon },
       { to: '/cms/pages', label: 'Pages', icon: FileText },
     ],
