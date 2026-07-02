@@ -21,7 +21,6 @@ export default function OrderList() {
       if (error) throw error
       return data || []
     },
-    refetchInterval: 15000,
   })
 
   const filtered = search

@@ -13,7 +13,6 @@ export default function Payments() {
       if (error) throw error
       return data || []
     },
-    refetchInterval: 15000,
   })
 
   return (

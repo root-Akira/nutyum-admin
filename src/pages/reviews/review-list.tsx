@@ -43,7 +43,6 @@ export default function ReviewList() {
         admin_reply: r.admin_reply || replies[r.id] || null,
       }))
     },
-    refetchInterval: 15000,
   })
 
   const deleteMutation = useMutation({

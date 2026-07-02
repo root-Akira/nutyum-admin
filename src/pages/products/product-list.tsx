@@ -24,7 +24,6 @@ export default function ProductList() {
       if (result.error) throw result.error
       return result.data || []
     },
-    refetchInterval: 15000,
   })
 
   const deleteMutation = useMutation({
