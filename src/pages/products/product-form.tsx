@@ -139,8 +139,9 @@ export default function ProductForm() {
               options={[
                 { value: '', label: 'Select category' },
                 { value: 'classic', label: 'Classic' },
-                { value: 'flavored', label: 'Flavored' },
-                { value: 'gift-pack', label: 'Gift Pack' },
+                { value: 'spicy', label: 'Spicy' },
+                { value: 'sweet', label: 'Sweet' },
+                { value: 'gift', label: 'Gift' },
               ]}
             />
             <Input label="Price (₹)" type="number" value={form.price} onChange={e => update('price', Number(e.target.value))} />
