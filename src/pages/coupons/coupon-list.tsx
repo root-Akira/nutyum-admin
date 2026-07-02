@@ -26,6 +26,7 @@ export default function CouponList() {
       if (error) throw error
       return data || []
     },
+    refetchInterval: 15000,
   })
 
   const deleteMutation = useMutation({

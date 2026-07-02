@@ -72,6 +72,7 @@ export default function CustomerList() {
 
       return rows.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     },
+    refetchInterval: 15000,
   })
 
   return (
