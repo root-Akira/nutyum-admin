@@ -1,19 +1,21 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin as supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input, Select, Textarea } from '@/components/ui/input'
 import { useToast } from '@/components/ui/toast'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Upload, X } from 'lucide-react'
 
 const defaultProduct = {
   name: '', slug: '', description: '', category: '',
-  price: 0, compare_price: 0, sku: '', stock: 0,
-  images: [] as string[], tags: [] as string[],
-  is_active: true, is_coming_soon: false, is_best_seller: false, is_new: false,
-  launch_date: '', nutrition: '', ingredients: '',
-  meta_title: '', meta_description: '', bgColor: '#FAF7EE',
+  price: 0, images: [] as string[],
+  is_new: false, is_best_seller: false, is_coming_soon: false,
+  nutritional_info: '', ingredients: [] as string[],
+}
+
+function makeSlug(name: string) {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
 export default function ProductForm() {
@@ -23,8 +25,8 @@ export default function ProductForm() {
   const queryClient = useQueryClient()
   const { toast } = useToast()
   const [form, setForm] = useState(defaultProduct)
-  const [imageInput, setImageInput] = useState('')
-  const [tagInput, setTagInput] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', id],
@@ -45,30 +47,28 @@ export default function ProductForm() {
         description: product.description || '',
         category: product.category || '',
         price: product.price || 0,
-        compare_price: product.compare_price || 0,
-        sku: product.sku || '',
-        stock: product.stock || 0,
         images: product.images || [],
-        tags: product.tags || [],
-        is_active: product.is_active ?? true,
-        is_coming_soon: product.is_coming_soon ?? false,
-        is_best_seller: product.is_best_seller ?? false,
         is_new: product.is_new ?? false,
-        launch_date: product.launch_date || '',
-        nutrition: product.nutrition || '',
-        ingredients: product.ingredients || '',
-        meta_title: product.meta_title || '',
-        meta_description: product.meta_description || '',
-        bgColor: product.bgColor || '#FAF7EE',
+        is_best_seller: product.is_best_seller ?? false,
+        is_coming_soon: product.is_coming_soon ?? false,
+        nutritional_info: product.nutritional_info || '',
+        ingredients: product.ingredients || [],
       })
     }
   }, [product])
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const payload = { ...form, updated_at: new Date().toISOString() }
+      const payload = {
+        ...form,
+        slug: form.slug || makeSlug(form.name),
+        nutritional_info: form.nutritional_info || null,
+      }
+      console.log('[Save] payload:', JSON.stringify(payload))
+
       if (isEdit) {
-        const { error } = await supabase.from('products').update(payload).eq('id', id!)
+        const { data, error } = await supabase.from('products').update(payload).eq('id', id!)
+        console.log('[Save] update result:', JSON.stringify({ data, error }))
         if (error) throw error
       } else {
         const { error } = await supabase.from('products').insert({ ...payload, created_at: new Date().toISOString() })
@@ -76,108 +76,93 @@ export default function ProductForm() {
       }
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['product', id] })
       queryClient.invalidateQueries({ queryKey: ['products'] })
       toast(isEdit ? 'Product updated' : 'Product created', 'success')
       navigate('/products')
     },
-    onError: (e) => toast(`Failed to save: ${e}`, 'error'),
+    onError: (e) => {
+      console.error('Save error:', e)
+      console.error('Save error message:', e.message)
+      console.error('Save error details:', JSON.stringify(e))
+      toast(`Failed to save: ${e.message}`, 'error')
+    },
   })
 
   if (isEdit && isLoading) return <div className="py-10 text-center text-[#4C5A48]">Loading...</div>
 
-  const update = (key: string, value: any) => setForm(prev => ({ ...prev, [key]: value }))
+  const update = (key: string, value: any) => {
+    setForm(prev => ({ ...prev, [key]: value }))
+  }
 
-  const addImage = () => {
-    if (imageInput && !form.images.includes(imageInput)) {
-      update('images', [...form.images, imageInput])
-      setImageInput('')
+  const removeImage = (i: number) => {
+    update('images', form.images.filter((_, j) => j !== i))
+  }
+
+  const uploadImage = async (file: File) => {
+    setUploading(true)
+    try {
+      const ext = file.name.split('.').pop()
+      const fileName = `${crypto.randomUUID()}.${ext}`
+      const { error } = await supabase.storage.from('product-images').upload(fileName, file)
+      if (error) throw error
+      const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName)
+      update('images', [...form.images, publicUrl])
+    } catch (e) {
+      toast(`Upload failed: ${e}`, 'error')
+    } finally {
+      setUploading(false)
     }
   }
 
-  const addTag = () => {
-    if (tagInput && !form.tags.includes(tagInput)) {
-      update('tags', [...form.tags, tagInput])
-      setTagInput('')
-    }
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) uploadImage(file)
+    e.target.value = ''
   }
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-3xl mx-auto">
       <button onClick={() => navigate('/products')} className="flex items-center gap-1.5 text-sm text-[#4C5A48] hover:text-[#173D22] mb-6 transition-colors">
         <ArrowLeft size={16} /> Back to Products
       </button>
 
-      <div className="space-y-8">
-        <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-6 space-y-5">
-          <h2 className="text-sm font-semibold text-[#173D22]">Basic Information</h2>
+      <div className="space-y-6">
+        <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-6 space-y-4">
+          <h2 className="text-sm font-semibold text-[#173D22]">Product Info</h2>
+          <Input label="Product Name" value={form.name} onChange={e => {
+            update('name', e.target.value)
+            if (!isEdit) update('slug', makeSlug(e.target.value))
+          }} />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input label="Product Name" value={form.name} onChange={e => update('name', e.target.value)} />
-            <Input label="Slug" value={form.slug} onChange={e => update('slug', e.target.value)} placeholder="product-slug" />
             <Select label="Category" value={form.category} onChange={e => update('category', e.target.value)}
               options={[
                 { value: '', label: 'Select category' },
-                { value: 'flavored-makhana', label: 'Flavored Makhana' },
-                { value: 'roasted', label: 'Roasted' },
-                { value: 'raw', label: 'Raw' },
+                { value: 'classic', label: 'Classic' },
+                { value: 'flavored', label: 'Flavored' },
                 { value: 'gift-pack', label: 'Gift Pack' },
               ]}
             />
-            <Input label="SKU" value={form.sku} onChange={e => update('sku', e.target.value)} />
-            <Input label="Background Color" value={form.bgColor} onChange={e => update('bgColor', e.target.value)} placeholder="#FAF7EE" />
-          </div>
-          <Textarea label="Description" value={form.description} onChange={e => update('description', e.target.value)} rows={4} />
-        </div>
-
-        <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-6 space-y-5">
-          <h2 className="text-sm font-semibold text-[#173D22]">Pricing & Stock</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Input label="Price (₹)" type="number" value={form.price} onChange={e => update('price', Number(e.target.value))} />
-            <Input label="Compare Price (₹)" type="number" value={form.compare_price} onChange={e => update('compare_price', Number(e.target.value))} />
-            <Input label="Stock" type="number" value={form.stock} onChange={e => update('stock', Number(e.target.value))} />
           </div>
+          <Textarea label="Description" value={form.description} onChange={e => update('description', e.target.value)} rows={3} />
         </div>
 
-        <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-6 space-y-5">
-          <h2 className="text-sm font-semibold text-[#173D22]">Status & Flags</h2>
-          <div className="flex flex-wrap gap-6">
-            <label className="flex items-center gap-2 text-sm text-[#173D22]">
-              <input type="checkbox" checked={form.is_active} onChange={e => update('is_active', e.target.checked)} className="rounded border-[rgba(23,61,34,0.3)]" />
-              Active
-            </label>
-            <label className="flex items-center gap-2 text-sm text-[#173D22]">
-              <input type="checkbox" checked={form.is_coming_soon} onChange={e => update('is_coming_soon', e.target.checked)} className="rounded border-[rgba(23,61,34,0.3)]" />
-              Coming Soon
-            </label>
-            <label className="flex items-center gap-2 text-sm text-[#173D22]">
-              <input type="checkbox" checked={form.is_best_seller} onChange={e => update('is_best_seller', e.target.checked)} className="rounded border-[rgba(23,61,34,0.3)]" />
-              Best Seller
-            </label>
-            <label className="flex items-center gap-2 text-sm text-[#173D22]">
-              <input type="checkbox" checked={form.is_new} onChange={e => update('is_new', e.target.checked)} className="rounded border-[rgba(23,61,34,0.3)]" />
-              New
-            </label>
-          </div>
-          {form.is_coming_soon && (
-            <Input label="Launch Date" type="date" value={form.launch_date} onChange={e => update('launch_date', e.target.value)} />
-          )}
-        </div>
-
-        <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-6 space-y-5">
+        <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-6 space-y-4">
           <h2 className="text-sm font-semibold text-[#173D22]">Images</h2>
           <div className="flex gap-2">
-            <Input value={imageInput} onChange={e => setImageInput(e.target.value)} placeholder="Paste image URL..." className="flex-1" />
-            <Button variant="secondary" onClick={addImage} type="button">Add</Button>
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+            <Button variant="secondary" onClick={() => fileInputRef.current?.click()} type="button" loading={uploading}>
+              <Upload size={14} /> Upload Image
+            </Button>
           </div>
           {form.images.length > 0 && (
-            <div className="flex gap-2 flex-wrap">
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {form.images.map((url, i) => (
-                <div key={i} className="relative group">
-                  <img src={url} alt="" className="w-16 h-16 rounded-lg object-cover border border-[rgba(23,61,34,0.08)]" />
-                  <button
-                    onClick={() => update('images', form.images.filter((_, j) => j !== i))}
-                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    &times;
+                <div key={i} className="relative group rounded-lg overflow-hidden border border-[rgba(23,61,34,0.08)]">
+                  <img src={url} alt="" className="w-full h-20 object-cover" />
+                  <button onClick={() => removeImage(i)} className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <X size={12} />
                   </button>
                 </div>
               ))}
@@ -185,35 +170,31 @@ export default function ProductForm() {
           )}
         </div>
 
-        <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-6 space-y-5">
-          <h2 className="text-sm font-semibold text-[#173D22]">Tags</h2>
-          <div className="flex gap-2">
-            <Input value={tagInput} onChange={e => setTagInput(e.target.value)} placeholder="Add tag..." className="flex-1" />
-            <Button variant="secondary" onClick={addTag} type="button">Add</Button>
+        <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-6 space-y-4">
+          <h2 className="text-sm font-semibold text-[#173D22]">Badges</h2>
+          <div className="flex flex-wrap gap-4">
+            <label className="flex items-center gap-2 text-sm text-[#173D22] cursor-pointer">
+              <input type="checkbox" checked={form.is_new} onChange={e => update('is_new', e.target.checked)} className="rounded border-[rgba(23,61,34,0.3)] accent-[#173D22]" />
+              New
+            </label>
+            <label className="flex items-center gap-2 text-sm text-[#173D22] cursor-pointer">
+              <input type="checkbox" checked={form.is_best_seller} onChange={e => update('is_best_seller', e.target.checked)} className="rounded border-[rgba(23,61,34,0.3)] accent-[#173D22]" />
+              Best Seller
+            </label>
+            <label className="flex items-center gap-2 text-sm text-[#173D22] cursor-pointer">
+              <input type="checkbox" checked={form.is_coming_soon} onChange={e => update('is_coming_soon', e.target.checked)} className="rounded border-[rgba(23,61,34,0.3)] accent-[#173D22]" />
+              Coming Soon
+            </label>
           </div>
-          {form.tags.length > 0 && (
-            <div className="flex gap-1.5 flex-wrap">
-              {form.tags.map((tag, i) => (
-                <span key={i} className="inline-flex items-center gap-1 rounded-full bg-[rgba(23,61,34,0.08)] px-3 py-1 text-xs text-[#173D22]">
-                  {tag}
-                  <button onClick={() => update('tags', form.tags.filter((_, j) => j !== i))} className="hover:text-red-500">&times;</button>
-                </span>
-              ))}
-            </div>
-          )}
         </div>
 
-        <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-6 space-y-5">
-          <h2 className="text-sm font-semibold text-[#173D22]">Nutrition & Ingredients</h2>
-          <Textarea label="Nutritional Info" value={form.nutrition} onChange={e => update('nutrition', e.target.value)} rows={3} />
-          <Textarea label="Ingredients" value={form.ingredients} onChange={e => update('ingredients', e.target.value)} rows={3} />
-        </div>
-
-        <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-6 space-y-5">
-          <h2 className="text-sm font-semibold text-[#173D22]">SEO</h2>
-          <Input label="Meta Title" value={form.meta_title} onChange={e => update('meta_title', e.target.value)} />
-          <Textarea label="Meta Description" value={form.meta_description} onChange={e => update('meta_description', e.target.value)} rows={2} />
-        </div>
+        <details className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-4 group">
+          <summary className="text-sm font-semibold text-[#173D22] cursor-pointer select-none">More Details</summary>
+          <div className="mt-4 space-y-4">
+            <Textarea label="Ingredients" value={form.ingredients.join('\n')} onChange={e => update('ingredients', e.target.value.split('\n').filter(Boolean))} rows={2} placeholder="One ingredient per line" />
+            <Textarea label="Nutritional Info" value={form.nutritional_info} onChange={e => update('nutritional_info', e.target.value)} rows={2} />
+          </div>
+        </details>
 
         <div className="flex justify-end gap-3 pb-10">
           <Button variant="secondary" onClick={() => navigate('/products')}>Cancel</Button>

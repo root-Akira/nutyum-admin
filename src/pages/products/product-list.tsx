@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { formatCurrency } from '@/lib/utils'
+import { supabaseAdmin as supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Table, TableHead, TableHeaderCell, TableBody, TableRow, TableCell } from '@/components/ui/table'
-import { StatusBadge } from '@/components/ui/badge'
 import { TableSkeleton } from '@/components/ui/skeleton'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { useToast } from '@/components/ui/toast'
@@ -17,14 +15,14 @@ export default function ProductList() {
   const queryClient = useQueryClient()
   const { toast } = useToast()
 
-  const { data: products, isLoading } = useQuery({
+  const { data: products, isLoading, error } = useQuery({
     queryKey: ['products', search],
     queryFn: async () => {
       let query = supabase.from('products').select('*').order('created_at', { ascending: false })
       if (search) query = query.ilike('name', `%${search}%`)
-      const { data, error } = await query
-      if (error) throw error
-      return data || []
+      const result = await query
+      if (result.error) throw result.error
+      return result.data || []
     },
   })
 
@@ -61,7 +59,12 @@ export default function ProductList() {
         </Link>
       </div>
 
-      {isLoading ? (
+      {error ? (
+        <div className="text-center py-16 rounded-xl border border-dashed border-red-200 bg-red-50">
+          <p className="text-red-600 font-medium">Failed to load products</p>
+          <p className="text-sm text-red-500 mt-1 whitespace-pre-wrap">{(error as Error).message}</p>
+        </div>
+      ) : isLoading ? (
         <TableSkeleton rows={6} />
       ) : !products?.length ? (
         <div className="text-center py-16 rounded-xl border border-dashed border-[rgba(23,61,34,0.15)] bg-[#FFFEFB]">
@@ -80,8 +83,6 @@ export default function ProductList() {
             <TableRow>
               <TableHeaderCell>Product</TableHeaderCell>
               <TableHeaderCell>Price</TableHeaderCell>
-              <TableHeaderCell>Stock</TableHeaderCell>
-              <TableHeaderCell>Status</TableHeaderCell>
               <TableHeaderCell className="text-right">Actions</TableHeaderCell>
             </TableRow>
           </TableHead>
@@ -91,23 +92,16 @@ export default function ProductList() {
                 <TableCell>
                   <div className="flex items-center gap-3">
                     {product.images?.[0] ? (
-                      <img src={product.images[0]} alt="" className="w-10 h-10 rounded-lg object-cover" />
-                    ) : (
-                      <div className="w-10 h-10 rounded-lg bg-[rgba(23,61,34,0.06)]" />
-                    )}
+                      <img src={product.images[0]} alt="" className="w-10 h-10 rounded-lg object-cover" onError={(e) => { (e.target as HTMLImageElement).src = ''; (e.target as HTMLImageElement).className = 'hidden' }} />
+                    ) : null}
                     <div>
                       <p className="font-medium text-[#173D22]">{product.name}</p>
-                      <p className="text-xs text-[#4C5A48]">{product.sku || product.slug}</p>
+                      <p className="text-xs text-[#4C5A48]/60">{product.slug}</p>
                     </div>
                   </div>
                 </TableCell>
-                <TableCell className="font-medium">{formatCurrency(product.price)}</TableCell>
                 <TableCell>
-                  <span className={product.stock <= 5 ? 'text-red-600 font-semibold' : ''}>{product.stock}</span>
-                </TableCell>
-                <TableCell>
-                  <StatusBadge status={product.is_active ? 'active' : 'draft'} />
-                  {product.is_coming_soon && <span className="ml-1.5 text-[10px] font-semibold text-[#E0961A]">COMING SOON</span>}
+                  <span className="font-medium">₹{product.price}</span>
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">

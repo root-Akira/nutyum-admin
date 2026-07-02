@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin as supabase } from '@/lib/supabase'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { StatusBadge } from '@/components/ui/badge'
 import { CardSkeleton } from '@/components/ui/skeleton'
