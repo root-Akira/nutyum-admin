@@ -9,22 +9,6 @@ import { useToast } from '@/components/ui/toast'
 import { X, MessageSquare } from 'lucide-react'
 import { Modal } from '@/components/ui/modal'
 
-const REPLIES_KEY = 'config/review-replies.json'
-
-async function loadReplies(): Promise<Record<string, string>> {
-  try {
-    const { data } = await supabase.storage.from('product-images').download(REPLIES_KEY)
-    if (data) return JSON.parse(await data.text())
-  } catch { /* not yet stored */ }
-  return {}
-}
-
-async function saveReplies(replies: Record<string, string>) {
-  const blob = new Blob([JSON.stringify(replies, null, 2)], { type: 'application/json' })
-  const { error } = await supabase.storage.from('product-images').upload(REPLIES_KEY, blob, { upsert: true })
-  if (error) throw error
-}
-
 export default function ReviewList() {
   const [replyModal, setReplyModal] = useState<{ id: string; reply: string } | null>(null)
   const queryClient = useQueryClient()
@@ -35,13 +19,7 @@ export default function ReviewList() {
     queryFn: async () => {
       const { data, error } = await supabase.from('reviews').select('*').order('created_at', { ascending: false })
       if (error) throw error
-      const reviews = data || []
-      // Merge admin replies from storage
-      const replies = await loadReplies()
-      return reviews.map(r => ({
-        ...r,
-        admin_reply: r.admin_reply || replies[r.id] || null,
-      }))
+      return data || []
     },
   })
 
@@ -56,14 +34,8 @@ export default function ReviewList() {
 
   const replyMutation = useMutation({
     mutationFn: async ({ id, reply }: { id: string; reply: string }) => {
-      // Try DB column first (if migration was run)
-      const { error: dbError } = await supabase.from('reviews').update({ admin_reply: reply }).eq('id', id)
-      if (dbError) {
-        // Fall back to storage JSON
-        const replies = await loadReplies()
-        replies[id] = reply
-        await saveReplies(replies)
-      }
+      const { error } = await supabase.from('reviews').update({ admin_reply: reply }).eq('id', id)
+      if (error) throw error
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['reviews'] }); toast('Reply posted', 'success'); setReplyModal(null) },
     onError: () => toast('Failed to post reply', 'error'),

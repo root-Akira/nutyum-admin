@@ -18,6 +18,10 @@ CREATE TABLE IF NOT EXISTS product_variants (
 -- Add missing columns to products table
 ALTER TABLE products ADD COLUMN IF NOT EXISTS is_out_of_stock BOOLEAN DEFAULT false;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS image_alts JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS compare_price DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE coupons ADD COLUMN IF NOT EXISTS show_in_store BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS sku TEXT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS stock INTEGER DEFAULT 0;
 
 -- Orders table
 CREATE TABLE IF NOT EXISTS orders (
@@ -76,11 +80,12 @@ CREATE TABLE IF NOT EXISTS coupons (
   per_user_limit INTEGER NOT NULL DEFAULT 1,
   applies_to TEXT NOT NULL DEFAULT 'all' CHECK (applies_to IN ('all','categories','products')),
   applicable_ids JSONB DEFAULT '[]'::jsonb,
-  starts_at TIMESTAMPTZ,
-  expires_at TIMESTAMPTZ,
-  is_active BOOLEAN NOT NULL DEFAULT true,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  starts_at       TIMESTAMPTZ,
+  expires_at      TIMESTAMPTZ,
+  is_active       BOOLEAN NOT NULL DEFAULT true,
+  show_in_store   BOOLEAN NOT NULL DEFAULT false,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- Banners table

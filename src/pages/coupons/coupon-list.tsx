@@ -71,6 +71,7 @@ export default function CouponList() {
               <TableHeaderCell>Used</TableHeaderCell>
               <TableHeaderCell>Valid Until</TableHeaderCell>
               <TableHeaderCell>Status</TableHeaderCell>
+              <TableHeaderCell>Store</TableHeaderCell>
               <TableHeaderCell className="text-right">Actions</TableHeaderCell>
             </TableRow>
           </TableHead>
@@ -82,7 +83,6 @@ export default function CouponList() {
                 </TableCell>
                 <TableCell>
                   {coupon.type === 'percentage' ? `${coupon.value}%` : formatCurrency(coupon.value)}
-                  {coupon.max_discount && <span className="text-xs text-[#4C5A48]"> (up to {formatCurrency(coupon.max_discount)})</span>}
                 </TableCell>
                 <TableCell className="text-sm">{formatCurrency(coupon.min_order)}</TableCell>
                 <TableCell className="text-sm">{coupon.usage_count}/{coupon.usage_limit}</TableCell>
@@ -94,6 +94,13 @@ export default function CouponList() {
                     <StatusBadge status="active" />
                   ) : (
                     <StatusBadge status="draft" />
+                  )}
+                </TableCell>
+                <TableCell className="text-center">
+                  {coupon.show_in_store ? (
+                    <span className="text-xs text-green-600 font-medium">Visible</span>
+                  ) : (
+                    <span className="text-xs text-[#4C5A48]/50">Hidden</span>
                   )}
                 </TableCell>
                 <TableCell className="text-right">

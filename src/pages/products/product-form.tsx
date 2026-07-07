@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/button'
 import { Input, Select, Textarea } from '@/components/ui/input'
 import { useToast } from '@/components/ui/toast'
 import { ArrowLeft, Upload, X } from 'lucide-react'
+import { productSchema } from '@/lib/validation'
 
 const defaultProduct = {
   name: '', slug: '', description: '', category: '',
-  price: 0, images: [] as string[],
-  is_new: false, is_best_seller: false, is_coming_soon: false,
+  price: '' as string | number, compare_price: '' as string | number, images: [] as string[],
+  weight: '', is_new: false, is_best_seller: false, is_coming_soon: false,
   nutritional_info: '', ingredients: [] as string[],
   vibes: [] as string[],
 }
@@ -26,7 +27,10 @@ export default function ProductForm() {
   const queryClient = useQueryClient()
   const { toast } = useToast()
   const [form, setForm] = useState(defaultProduct)
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [uploading, setUploading] = useState(false)
+  const [variants, setVariants] = useState<{ id?: string; name: string; sku: string; price: number; compare_price: number; stock: number; is_active: boolean }[]>([])
+  const [deletedVariantIds, setDeletedVariantIds] = useState<string[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { data: product, isLoading } = useQuery({
@@ -86,6 +90,17 @@ export default function ProductForm() {
     },
   })
 
+  const { data: existingVariants = [] } = useQuery({
+    queryKey: ['product-variants', id],
+    queryFn: async () => {
+      if (!id) return []
+      const { data, error } = await supabase.from('product_variants').select('*').eq('product_id', id).order('name')
+      if (error) return []
+      return data || []
+    },
+    enabled: isEdit,
+  })
+
   useEffect(() => {
     if (product) {
       setForm({
@@ -93,7 +108,9 @@ export default function ProductForm() {
         slug: product.slug || '',
         description: product.description || '',
         category: product.category || '',
-        price: product.price || 0,
+        price: product.price ?? 0,
+        compare_price: product.compare_price ?? '',
+        weight: product.weight || '',
         images: product.images || [],
         is_new: product.is_new ?? false,
         is_best_seller: product.is_best_seller ?? false,
@@ -105,27 +122,81 @@ export default function ProductForm() {
     }
   }, [product])
 
+  useEffect(() => {
+    if (existingVariants.length > 0) {
+      setVariants(existingVariants.map((v: any) => ({
+        id: v.id,
+        name: v.name || '',
+        sku: v.sku || '',
+        price: v.price || 0,
+        compare_price: v.compare_price || 0,
+        stock: v.stock || 0,
+        is_active: v.is_active ?? true,
+      })))
+    }
+  }, [existingVariants])
+
+  const validate = () => {
+    const result = productSchema.safeParse(form)
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {}
+      for (const issue of result.error.issues) {
+        const key = issue.path[0] as string
+        if (!fieldErrors[key]) fieldErrors[key] = issue.message
+      }
+      setErrors(fieldErrors)
+      return false
+    }
+    setErrors({})
+    return true
+  }
+
   const saveMutation = useMutation({
     mutationFn: async () => {
+      if (!validate()) throw new Error('Please fix validation errors')
+
       const payload = {
         ...form,
+        price: Number(form.price) || 0,
+        compare_price: Number(form.compare_price) || 0,
         slug: form.slug || makeSlug(form.name),
         nutritional_info: form.nutritional_info || null,
       }
-      console.log('[Save] payload:', JSON.stringify(payload))
+
+      let productId = id
 
       if (isEdit) {
-        const { data, error } = await supabase.from('products').update(payload).eq('id', id!)
-        console.log('[Save] update result:', JSON.stringify({ data, error }))
+        const { error } = await supabase.from('products').update(payload).eq('id', id!)
         if (error) throw error
       } else {
-        const { error } = await supabase.from('products').insert({ ...payload, created_at: new Date().toISOString() })
+        const { data, error } = await supabase.from('products').insert({ ...payload, created_at: new Date().toISOString() }).select('id').single()
         if (error) throw error
+        productId = data.id
+      }
+
+      if (deletedVariantIds.length > 0) {
+        await supabase.from('product_variants').delete().in('id', deletedVariantIds)
+      }
+
+      for (const v of variants) {
+        const vPayload = {
+          name: v.name, sku: v.sku,
+          price: Number(v.price) || 0,
+          compare_price: Number(v.compare_price) || 0,
+          stock: Number(v.stock) || 0,
+          is_active: v.is_active,
+        }
+        if (v.id) {
+          await supabase.from('product_variants').update(vPayload).eq('id', v.id)
+        } else {
+          await supabase.from('product_variants').insert({ ...vPayload, product_id: productId })
+        }
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['product', id] })
       queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['product-variants', id] })
       toast(isEdit ? 'Product updated' : 'Product created', 'success')
       navigate('/products')
     },
@@ -140,6 +211,7 @@ export default function ProductForm() {
   if (isEdit && isLoading) return <div className="py-10 text-center text-[#4C5A48]">Loading...</div>
 
   const update = (key: string, value: any) => {
+    if (errors[key]) setErrors(prev => { const n = { ...prev }; delete n[key]; return n })
     setForm(prev => ({ ...prev, [key]: value }))
   }
 
@@ -178,24 +250,27 @@ export default function ProductForm() {
       <div className="space-y-6">
         <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-6 space-y-4">
           <h2 className="text-sm font-semibold text-[#173D22]">Product Info</h2>
-          <Input label="Product Name" value={form.name} onChange={e => {
+          <Input label="Product Name" value={form.name} error={errors.name} onChange={e => {
             update('name', e.target.value)
             if (!isEdit) update('slug', makeSlug(e.target.value))
           }} />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Select label="Category" value={form.category} onChange={e => update('category', e.target.value)}
+            <Select label="Category" value={form.category} error={errors.category} onChange={e => update('category', e.target.value)}
               options={[
                 { value: '', label: loadingCats ? 'Loading...' : 'Select category' },
                 ...categories.map(c => ({ value: c.slug, label: c.name })),
               ]}
             />
-            <Input label="Price (₹)" type="number" value={form.price} onChange={e => update('price', Number(e.target.value))} />
+            <Input label="Price (₹)" type="number" min={0} value={form.price} error={errors.price} onChange={e => update('price', e.target.value)} />
+            <Input label="Compare Price / MRP (₹)" type="number" min={0} value={form.compare_price} onChange={e => update('compare_price', e.target.value)} />
+            <Input label="Weight" value={form.weight} onChange={e => update('weight', e.target.value)} placeholder="e.g. 200g" />
           </div>
-          <Textarea label="Description" value={form.description} onChange={e => update('description', e.target.value)} rows={3} />
+          <Textarea label="Description" value={form.description} error={errors.description} onChange={e => update('description', e.target.value)} rows={3} />
         </div>
 
         <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-6 space-y-4">
           <h2 className="text-sm font-semibold text-[#173D22]">Images</h2>
+          <p className="text-xs text-[#4C5A48]">Recommended size: <strong>1200 × 1600px</strong> (3:4 portrait ratio) for best display across all sections.</p>
           <div className="flex gap-2">
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
             <Button variant="secondary" onClick={() => fileInputRef.current?.click()} type="button" loading={uploading}>
@@ -214,6 +289,50 @@ export default function ProductForm() {
               ))}
             </div>
           )}
+        </div>
+
+        <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-6 space-y-4">
+          <h2 className="text-sm font-semibold text-[#173D22]">Variants (pack sizes / flavors)</h2>
+          <p className="text-xs text-[#4C5A48]">Add different pack sizes or flavor options for this product.</p>
+          {variants.map((v, i) => (
+            <div key={i} className="rounded-lg border border-[rgba(23,61,34,0.08)] bg-[#FAF7EE] p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-[#173D22]">Variant {i + 1}</span>
+                <button onClick={() => {
+                  if (v.id) setDeletedVariantIds(prev => [...prev, v.id!])
+                  setVariants(prev => prev.filter((_, j) => j !== i))
+                }} className="text-red-500 hover:text-red-700 transition-colors">
+                  <X size={14} />
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input label="Name" value={v.name} onChange={e => {
+                  const next = [...variants]; next[i] = { ...next[i], name: e.target.value }; setVariants(next)
+                }} placeholder="e.g. 100g Pack" />
+                <Input label="Product Code" value={v.sku} onChange={e => {
+                  const next = [...variants]; next[i] = { ...next[i], sku: e.target.value }; setVariants(next)
+                }} placeholder="e.g. MKN-100" />
+                <Input label="Price (₹)" type="number" min={0} value={v.price} onChange={e => {
+                  const next = [...variants]; next[i] = { ...next[i], price: e.target.value }; setVariants(next)
+                }} />
+                <Input label="Compare Price (₹)" type="number" min={0} value={v.compare_price} onChange={e => {
+                  const next = [...variants]; next[i] = { ...next[i], compare_price: e.target.value }; setVariants(next)
+                }} />
+                <Input label="Stock" type="number" min={0} value={v.stock} onChange={e => {
+                  const next = [...variants]; next[i] = { ...next[i], stock: e.target.value }; setVariants(next)
+                }} />
+                <label className="flex items-center gap-2 text-sm text-[#173D22] pt-6">
+                  <input type="checkbox" checked={v.is_active} onChange={e => {
+                    const next = [...variants]; next[i] = { ...next[i], is_active: e.target.checked }; setVariants(next)
+                  }} className="rounded border-[rgba(23,61,34,0.3)] accent-[#173D22]" />
+                  Active
+                </label>
+              </div>
+            </div>
+          ))}
+          <Button variant="secondary" onClick={() => setVariants(prev => [...prev, { name: '', sku: '', price: '' as any, compare_price: '' as any, stock: '' as any, is_active: true }])} type="button">
+            + Add Variant
+          </Button>
         </div>
 
         <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-6 space-y-4">

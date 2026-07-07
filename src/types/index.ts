@@ -136,7 +136,6 @@ export interface Coupon {
   type: 'flat' | 'percentage'
   value: number
   min_order: number
-  max_discount?: number
   usage_limit: number
   usage_count: number
   per_user_limit: number
@@ -145,6 +144,7 @@ export interface Coupon {
   starts_at: string
   expires_at: string
   is_active: boolean
+  show_in_store: boolean
   created_at: string
 }
 

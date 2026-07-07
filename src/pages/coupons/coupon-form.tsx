@@ -6,14 +6,15 @@ import { Button } from '@/components/ui/button'
 import { Input, Select } from '@/components/ui/input'
 import { useToast } from '@/components/ui/toast'
 import { ArrowLeft } from 'lucide-react'
+import { couponSchema } from '@/lib/validation'
 
 const defaultCoupon = {
   code: '', type: 'percentage' as 'flat' | 'percentage',
-  value: 0, min_order: 0, max_discount: 0,
+  value: '' as string | number, min_order: '' as string | number,
   usage_limit: 100, per_user_limit: 1,
   applies_to: 'all' as 'all' | 'categories' | 'products',
   applicable_ids: [] as string[],
-  starts_at: '', expires_at: '', is_active: true,
+  starts_at: '', expires_at: '', is_active: true, show_in_store: false,
 }
 
 export default function CouponForm() {
@@ -23,6 +24,7 @@ export default function CouponForm() {
   const queryClient = useQueryClient()
   const { toast } = useToast()
   const [form, setForm] = useState(defaultCoupon)
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   const { data: coupon, isLoading } = useQuery({
     queryKey: ['coupon', id],
@@ -39,11 +41,11 @@ export default function CouponForm() {
     if (coupon) setForm({
       code: coupon.code || '',
       type: coupon.type || 'percentage',
-      value: coupon.value || 0,
-      min_order: coupon.min_order || 0,
-      max_discount: coupon.max_discount || 0,
-      usage_limit: coupon.usage_limit || 100,
-      per_user_limit: coupon.per_user_limit || 1,
+      value: coupon.value ?? '',
+      min_order: coupon.min_order ?? '',
+      usage_limit: coupon.usage_limit ?? 100,
+      show_in_store: coupon.show_in_store ?? false,
+      per_user_limit: coupon.per_user_limit ?? 1,
       applies_to: coupon.applies_to || 'all',
       applicable_ids: coupon.applicable_ids || [],
       starts_at: coupon.starts_at?.split('T')[0] || '',
@@ -52,9 +54,26 @@ export default function CouponForm() {
     })
   }, [coupon])
 
+  const validate = () => {
+    const result = couponSchema.safeParse(form)
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {}
+      for (const issue of result.error.issues) {
+        const key = issue.path[0] as string
+        if (!fieldErrors[key]) fieldErrors[key] = issue.message
+      }
+      setErrors(fieldErrors)
+      return false
+    }
+    setErrors({})
+    return true
+  }
+
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const payload = { ...form, updated_at: new Date().toISOString() }
+      if (!validate()) throw new Error('Please fix validation errors')
+
+      const payload = { ...form, value: Number(form.value) || 0, min_order: Number(form.min_order) || 0, usage_limit: Number(form.usage_limit) || 100, updated_at: new Date().toISOString() }
       if (isEdit) {
         const { error } = await supabase.from('coupons').update(payload).eq('id', id!)
         if (error) throw error
@@ -71,7 +90,10 @@ export default function CouponForm() {
     onError: (e) => toast(`Failed to save: ${e}`, 'error'),
   })
 
-  const update = (key: string, value: any) => setForm(prev => ({ ...prev, [key]: value }))
+  const update = (key: string, value: any) => {
+    if (errors[key]) setErrors(prev => { const n = { ...prev }; delete n[key]; return n })
+    setForm(prev => ({ ...prev, [key]: value }))
+  }
 
   if (isEdit && isLoading) return <div className="py-10 text-center text-[#4C5A48]">Loading...</div>
 
@@ -84,17 +106,16 @@ export default function CouponForm() {
       <div className="space-y-6">
         <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input label="Coupon Code" value={form.code} onChange={e => update('code', e.target.value.toUpperCase())} placeholder="WELCOME10" />
+            <Input label="Coupon Code" value={form.code} error={errors.code} onChange={e => update('code', e.target.value.toUpperCase())} placeholder="WELCOME10" />
             <Select label="Discount Type" value={form.type} onChange={e => update('type', e.target.value)}
               options={[
                 { value: 'percentage', label: 'Percentage (%)' },
                 { value: 'flat', label: 'Flat (₹)' },
               ]}
             />
-            <Input label={form.type === 'percentage' ? 'Discount %' : 'Discount Amount (₹)'} type="number" value={form.value} onChange={e => update('value', Number(e.target.value))} />
-            <Input label="Max Discount (₹)" type="number" value={form.max_discount} onChange={e => update('max_discount', Number(e.target.value))} />
-            <Input label="Min Order Value (₹)" type="number" value={form.min_order} onChange={e => update('min_order', Number(e.target.value))} />
-            <Input label="Usage Limit" type="number" value={form.usage_limit} onChange={e => update('usage_limit', Number(e.target.value))} />
+            <Input label={form.type === 'percentage' ? 'Discount %' : 'Discount Amount (₹)'} type="number" min={0} value={form.value} error={errors.value} onChange={e => update('value', e.target.value)} />
+            <Input label="Min Order Value (₹)" type="number" min={0} value={form.min_order} error={errors.min_order} onChange={e => update('min_order', e.target.value)} />
+            <Input label="Usage Limit" type="number" min={0} value={form.usage_limit} error={errors.usage_limit} onChange={e => update('usage_limit', e.target.value)} />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -102,10 +123,16 @@ export default function CouponForm() {
             <Input label="Expiry Date" type="date" value={form.expires_at} onChange={e => update('expires_at', e.target.value)} />
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-[#173D22]">
-            <input type="checkbox" checked={form.is_active} onChange={e => update('is_active', e.target.checked)} className="rounded border-[rgba(23,61,34,0.3)]" />
-            Active
-          </label>
+          <div className="flex items-center gap-6">
+            <label className="flex items-center gap-2 text-sm text-[#173D22]">
+              <input type="checkbox" checked={form.is_active} onChange={e => update('is_active', e.target.checked)} className="rounded border-[rgba(23,61,34,0.3)] accent-[#173D22]" />
+              Active
+            </label>
+            <label className="flex items-center gap-2 text-sm text-[#173D22]">
+              <input type="checkbox" checked={form.show_in_store} onChange={e => update('show_in_store', e.target.checked)} className="rounded border-[rgba(23,61,34,0.3)] accent-[#173D22]" />
+              Show on Store
+            </label>
+          </div>
         </div>
 
         <div className="flex justify-end gap-3">

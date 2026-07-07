@@ -10,7 +10,7 @@ import { Plus, Trash2 } from 'lucide-react'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
 
 export default function Shipping() {
-  const [newZone, setNewZone] = useState({ name: '', states: '', pincodes: '', rate: 0, free_above: 0, estimated_days: '' })
+  const [newZone, setNewZone] = useState({ name: '', states: '', pincodes: '', rate: '' as string | number, free_above: '' as string | number, estimated_days: '' })
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const queryClient = useQueryClient()
   const { toast } = useToast()
@@ -30,13 +30,13 @@ export default function Shipping() {
         name: newZone.name,
         states: newZone.states.split(',').map(s => s.trim()),
         pincodes: newZone.pincodes.split(',').map(s => s.trim()),
-        rate: newZone.rate,
-        free_above: newZone.free_above || null,
+        rate: Number(newZone.rate) || 0,
+        free_above: Number(newZone.free_above) || null,
         estimated_days: newZone.estimated_days,
       })
       if (error) throw error
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['shipping-zones'] }); toast('Shipping zone added', 'success'); setNewZone({ name: '', states: '', pincodes: '', rate: 0, free_above: 0, estimated_days: '' }) },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['shipping-zones'] }); toast('Shipping zone added', 'success'); setNewZone({ name: '', states: '', pincodes: '', rate: '', free_above: '', estimated_days: '' }) },
     onError: () => toast('Failed to add shipping zone', 'error'),
   })
 
@@ -56,8 +56,8 @@ export default function Shipping() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input label="Zone Name" value={newZone.name} onChange={e => setNewZone(p => ({ ...p, name: e.target.value }))} placeholder="North India" />
           <Input label="Estimated Delivery" value={newZone.estimated_days} onChange={e => setNewZone(p => ({ ...p, estimated_days: e.target.value }))} placeholder="2-3 business days" />
-          <Input label="Rate (₹)" type="number" value={newZone.rate} onChange={e => setNewZone(p => ({ ...p, rate: Number(e.target.value) }))} />
-          <Input label="Free Above (₹)" type="number" value={newZone.free_above} onChange={e => setNewZone(p => ({ ...p, free_above: Number(e.target.value) }))} />
+          <Input label="Rate (₹)" type="number" min={0} value={newZone.rate} onChange={e => setNewZone(p => ({ ...p, rate: e.target.value }))} />
+          <Input label="Free Above (₹)" type="number" min={0} value={newZone.free_above} onChange={e => setNewZone(p => ({ ...p, free_above: e.target.value }))} />
         </div>
         <Input label="States (comma-separated)" value={newZone.states} onChange={e => setNewZone(p => ({ ...p, states: e.target.value }))} placeholder="Maharashtra, Gujarat, Goa" />
         <Input label="Pincodes (comma-separated)" value={newZone.pincodes} onChange={e => setNewZone(p => ({ ...p, pincodes: e.target.value }))} placeholder="400001, 400002" />
