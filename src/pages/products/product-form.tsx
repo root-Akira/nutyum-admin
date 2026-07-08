@@ -265,6 +265,21 @@ export default function ProductForm() {
     e.target.value = ''
   }
 
+  if (isEdit && isLoading) {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <div className="h-4 w-24 rounded-lg bg-[rgba(23,61,34,0.06)] animate-pulse mb-6" />
+        <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-6">
+          <div className="animate-pulse space-y-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="h-10 rounded-lg bg-[rgba(23,61,34,0.06)]" />
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-3xl mx-auto">
       <button onClick={() => navigate('/products')} className="flex items-center gap-1.5 text-sm text-[#4C5A48] hover:text-[#173D22] mb-6 transition-colors">
