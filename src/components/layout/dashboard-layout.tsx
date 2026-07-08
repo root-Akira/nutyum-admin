@@ -16,7 +16,6 @@ const titles: Record<string, string> = {
   '/coupons': 'Coupons',
   '/cms/categories': 'Categories',
   '/cms/vibes': 'Vibes',
-  '/cms/banners': 'Banners',
   '/cms/pages': 'CMS Pages',
   '/settings/shipping': 'Shipping Settings',
   '/settings/payments': 'Payment Settings',

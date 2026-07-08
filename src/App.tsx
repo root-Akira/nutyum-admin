@@ -16,7 +16,6 @@ const CouponList = lazy(() => import('@/pages/coupons/coupon-list'))
 const CouponForm = lazy(() => import('@/pages/coupons/coupon-form'))
 const CategoriesList = lazy(() => import('@/pages/cms/categories-list'))
 const VibesList = lazy(() => import('@/pages/cms/vibes-list'))
-const Banners = lazy(() => import('@/pages/cms/banners'))
 const CmsPages = lazy(() => import('@/pages/cms/pages'))
 const Shipping = lazy(() => import('@/pages/settings/shipping'))
 const Payments = lazy(() => import('@/pages/settings/payments'))
@@ -68,7 +67,6 @@ export default function App() {
           <Route path="/coupons/:id" element={<CouponForm />} />
           <Route path="/cms/categories" element={<CategoriesList />} />
           <Route path="/cms/vibes" element={<VibesList />} />
-          <Route path="/cms/banners" element={<Banners />} />
           <Route path="/cms/pages" element={<CmsPages />} />
           <Route path="/settings/shipping" element={<Shipping />} />
           <Route path="/settings/payments" element={<Payments />} />
