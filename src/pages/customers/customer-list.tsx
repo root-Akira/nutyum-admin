@@ -122,7 +122,7 @@ export default function CustomerList() {
                 <TableCell>{customer.order_count}</TableCell>
                 <TableCell className="font-medium">{formatCurrency(customer.total_spent)}</TableCell>
                 <TableCell className="text-xs text-[#4C5A48]">{formatDateTime(customer.created_at)}</TableCell>
-                <TableCell>{customer.is_blocked ? <StatusBadge status="cancelled" /> : <StatusBadge status="active" />}</TableCell>
+                <TableCell>{customer.is_blocked ? <StatusBadge status="blocked" /> : <StatusBadge status="active" />}</TableCell>
               </TableRow>
             ))}
           </TableBody>

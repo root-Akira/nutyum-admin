@@ -1,16 +1,23 @@
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabaseAdmin } from '@/lib/supabase'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { StatusBadge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { CardSkeleton } from '@/components/ui/skeleton'
-import { ArrowLeft, Mail, Phone, MapPin } from 'lucide-react'
+import { ConfirmModal } from '@/components/ui/confirm-modal'
+import { useToast } from '@/components/ui/toast'
+import { ArrowLeft, Mail, Phone, MapPin, Ban, CheckCircle } from 'lucide-react'
 
 const API_URL = import.meta.env.VITE_SUPABASE_URL
 
 export default function CustomerDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   const { data: customer, isLoading } = useQuery({
     queryKey: ['customer', id],
@@ -45,6 +52,7 @@ export default function CustomerDetail() {
         order_count: orderCount,
         total_spent: totalSpent,
         created_at: user.created_at,
+        banned_until: user.banned_until || null,
       }
     },
     enabled: !!id,
@@ -70,6 +78,34 @@ export default function CustomerDetail() {
     enabled: !!id,
   })
 
+  const isBlocked = customer?.banned_until ? new Date(customer.banned_until) > new Date() : false
+
+  const { mutate: toggleBlock, isPending: toggling } = useMutation({
+    mutationFn: async (block: boolean) => {
+      const { error: authErr } = await supabaseAdmin.auth.admin.updateUserById(
+        id!,
+        { ban_duration: block ? '876000h' : 'none' }
+      )
+      if (authErr) throw authErr
+
+      // Sync is_blocked to public.users
+      const { error: dbErr } = await supabaseAdmin.from('users').upsert({
+        id,
+        is_blocked: block,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'id' })
+      if (dbErr) throw dbErr
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customer', id] })
+      queryClient.invalidateQueries({ queryKey: ['customers'] })
+      toast(isBlocked ? 'Customer unblocked' : 'Customer blocked', 'success')
+    },
+    onError: (err) => {
+      toast(`Failed: ${err instanceof Error ? err.message : 'Unknown error'}`, 'error')
+    },
+  })
+
   if (isLoading) return <CardSkeleton lines={6} />
   if (!customer) return <div className="py-10 text-center text-[#4C5A48]">Customer not found</div>
 
@@ -81,10 +117,23 @@ export default function CustomerDetail() {
 
       <div className="space-y-6">
         <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-5">
-          <h2 className="text-lg font-semibold text-[#173D22]">{customer.name}</h2>
-          <div className="flex flex-wrap gap-4 mt-3 text-sm text-[#4C5A48]">
-            <span className="flex items-center gap-1.5"><Mail size={14} /> {customer.email}</span>
-            {customer.phone && <span className="flex items-center gap-1.5"><Phone size={14} /> {customer.phone}</span>}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-[#173D22]">{customer.name}</h2>
+              <div className="flex flex-wrap gap-4 mt-3 text-sm text-[#4C5A48]">
+                <span className="flex items-center gap-1.5"><Mail size={14} /> {customer.email}</span>
+                {customer.phone && <span className="flex items-center gap-1.5"><Phone size={14} /> {customer.phone}</span>}
+              </div>
+            </div>
+            <Button
+              variant={isBlocked ? 'primary' : 'danger'}
+              size="sm"
+              loading={toggling}
+              onClick={() => setConfirmOpen(true)}
+            >
+              {isBlocked ? <CheckCircle size={14} /> : <Ban size={14} />}
+              {isBlocked ? 'Unblock' : 'Block'}
+            </Button>
           </div>
           <div className="flex gap-4 mt-4">
             <div className="rounded-lg bg-[rgba(23,61,34,0.06)] px-4 py-3 text-center">
@@ -143,6 +192,19 @@ export default function CustomerDetail() {
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={() => toggleBlock(!isBlocked)}
+        title={isBlocked ? 'Unblock Customer' : 'Block Customer'}
+        message={isBlocked
+          ? `Are you sure you want to unblock ${customer.name}? They will be able to log in and place orders again.`
+          : `Are you sure you want to block ${customer.name}? They will not be able to log in or place orders.`
+        }
+        confirmLabel={isBlocked ? 'Unblock' : 'Block'}
+        variant={isBlocked ? 'default' : 'danger'}
+      />
     </div>
   )
 }

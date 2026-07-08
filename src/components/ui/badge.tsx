@@ -37,6 +37,7 @@ export function StatusBadge({ status }: { status: string }) {
     failed: { label: 'Failed', variant: 'danger' },
     refunded: { label: 'Refunded', variant: 'info' },
     active: { label: 'Active', variant: 'success' },
+    blocked: { label: 'Blocked', variant: 'danger' },
     draft: { label: 'Draft', variant: 'default' },
     out_of_stock: { label: 'Out of Stock', variant: 'danger' },
   }
