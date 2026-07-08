@@ -215,7 +215,6 @@ export default function ProductList() {
               </TableHeaderCell>
               <TableHeaderCell>Product</TableHeaderCell>
               <TableHeaderCell>Price</TableHeaderCell>
-              <TableHeaderCell>Stock</TableHeaderCell>
               <TableHeaderCell className="text-right">Actions</TableHeaderCell>
             </TableRow>
           </TableHead>
@@ -243,11 +242,6 @@ export default function ProductList() {
                 </TableCell>
                 <TableCell>
                   <span className="font-medium">₹{product.price}</span>
-                </TableCell>
-                <TableCell>
-                  <span className={`text-sm ${(product.stock ?? 0) <= 5 ? 'text-red-600 font-medium' : 'text-[#4C5A48]'}`}>
-                    {product.stock ?? 0}
-                  </span>
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">

@@ -12,7 +12,7 @@ const defaultProduct = {
   name: '', slug: '', description: '', category: '',
   price: '' as string | number, compare_price: '' as string | number, images: [] as string[],
   weight: '', is_new: false, is_best_seller: false, is_coming_soon: false,
-  nutritional_info: '', ingredients: [] as string[],
+  ingredients: [] as string[],
   vibes: [] as string[],
 }
 
@@ -115,7 +115,7 @@ export default function ProductForm() {
         is_new: product.is_new ?? false,
         is_best_seller: product.is_best_seller ?? false,
         is_coming_soon: product.is_coming_soon ?? false,
-        nutritional_info: product.nutritional_info || '',
+
         ingredients: product.ingredients || [],
         vibes: product.vibes || [],
       })
@@ -160,7 +160,7 @@ export default function ProductForm() {
         price: Number(form.price) || 0,
         compare_price: Number(form.compare_price) || 0,
         slug: form.slug || makeSlug(form.name),
-        nutritional_info: form.nutritional_info || null,
+
       }
 
       let productId = id
@@ -254,17 +254,12 @@ export default function ProductForm() {
             update('name', e.target.value)
             if (!isEdit) update('slug', makeSlug(e.target.value))
           }} />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Select label="Category" value={form.category} error={errors.category} onChange={e => update('category', e.target.value)}
-              options={[
-                { value: '', label: loadingCats ? 'Loading...' : 'Select category' },
-                ...categories.map(c => ({ value: c.slug, label: c.name })),
-              ]}
-            />
-            <Input label="Price (₹)" type="number" min={0} value={form.price} error={errors.price} onChange={e => update('price', e.target.value)} />
-            <Input label="Compare Price / MRP (₹)" type="number" min={0} value={form.compare_price} onChange={e => update('compare_price', e.target.value)} />
-            <Input label="Weight" value={form.weight} onChange={e => update('weight', e.target.value)} placeholder="e.g. 200g" />
-          </div>
+          <Select label="Category" value={form.category} error={errors.category} onChange={e => update('category', e.target.value)}
+            options={[
+              { value: '', label: loadingCats ? 'Loading...' : 'Select category' },
+              ...categories.map(c => ({ value: c.slug, label: c.name })),
+            ]}
+          />
           <Textarea label="Description" value={form.description} error={errors.description} onChange={e => update('description', e.target.value)} rows={3} />
         </div>
 
@@ -357,7 +352,6 @@ export default function ProductForm() {
           <summary className="text-sm font-semibold text-[#173D22] cursor-pointer select-none">More Details</summary>
           <div className="mt-4 space-y-4">
             <Textarea label="Ingredients" value={form.ingredients.join('\n')} onChange={e => update('ingredients', e.target.value.split('\n').filter(Boolean))} rows={2} placeholder="One ingredient per line" />
-            <Textarea label="Nutritional Info" value={form.nutritional_info} onChange={e => update('nutritional_info', e.target.value)} rows={2} />
           </div>
         </details>
 
