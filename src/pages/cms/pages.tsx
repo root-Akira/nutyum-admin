@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Table, TableHead, TableHeaderCell, TableBody, TableRow, TableCell } from '@/components/ui/table'
 import { TableSkeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
-import { Edit } from 'lucide-react'
+import { Edit, Plus } from 'lucide-react'
 import { Modal } from '@/components/ui/modal'
 
 export default function CmsPages() {
@@ -37,13 +37,33 @@ export default function CmsPages() {
     onError: () => toast('Failed to update page', 'error'),
   })
 
+  const seedMutation = useMutation({
+    mutationFn: async () => {
+      const defaults = [
+        { slug: 'about', title: 'About Us', content: '<h2>Our Story</h2><p>Nutyum was born from a simple idea: make healthy snacking irresistible. We start with premium makhana (fox nuts) and roast them to perfection with natural ingredients.</p><h2>Our Mission</h2><p>We believe eating well shouldn\'t mean compromising on taste. Every pack of Nutyum is crafted to deliver maximum crunch and flavour with zero guilt.</p>', updated_at: new Date().toISOString() },
+        { slug: 'faq', title: 'FAQ', content: '<h2>What is makhana?</h2><p>Makhana, also known as fox nuts or lotus seeds, is a nutritious seed harvested from the Euryale ferox plant.</p><h2>Are Nutyum products gluten-free?</h2><p>Yes. All Nutyum makhana snacks are naturally gluten-free.</p><h2>Are Nutyum products vegan?</h2><p>Yes, all our flavours are 100% plant-based and vegan-friendly.</p>', updated_at: new Date().toISOString() },
+        { slug: 'contact', title: 'Contact Us', content: '<h2>Get in Touch</h2><p>We\'d love to hear from you. Reach out to us at <a href="mailto:hello@nutyum.in">hello@nutyum.in</a></p><h2>Wholesale</h2><p>Interested in stocking Nutyum? Email us at <a href="mailto:wholesale@nutyum.in">wholesale@nutyum.in</a></p>', updated_at: new Date().toISOString() },
+      ]
+      const { error } = await supabase.from('cms_pages').upsert(defaults, { onConflict: 'slug', ignoreDuplicates: true })
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cms-pages'] })
+      toast('Default pages created', 'success')
+    },
+    onError: () => toast('Failed to create pages', 'error'),
+  })
+
   return (
     <div>
       {isLoading ? (
         <TableSkeleton rows={5} />
       ) : !pages?.length ? (
         <div className="text-center py-16 rounded-xl border border-dashed border-[rgba(23,61,34,0.15)] bg-[#FFFEFB]">
-          <p className="text-[#4C5A48] font-medium">No CMS pages found</p>
+          <p className="text-[#4C5A48] font-medium mb-4">No CMS pages found</p>
+          <Button onClick={() => seedMutation.mutate()} loading={seedMutation.isPending}>
+            <Plus size={16} /> Seed Default Pages
+          </Button>
         </div>
       ) : (
         <Table>
