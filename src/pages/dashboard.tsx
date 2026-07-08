@@ -18,10 +18,11 @@ export default function Dashboard() {
       const settingsRes = await supabase.from('site_settings').select('low_stock_threshold').maybeSingle()
       const threshold = (settingsRes.data as any)?.low_stock_threshold ?? 5
 
-      const [ordersRes, countRes, lowStockRes, recentRes, topRes] = await Promise.all([
+      const [ordersRes, countRes, lowStockRes, lowStockItems, recentRes, topRes] = await Promise.all([
         supabase.from('orders').select('total, status, created_at').gte('created_at', monthStart),
         supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'placed'),
-        supabase.from('products').select('id', { count: 'exact', head: true }).lte('stock', threshold).gt('stock', 0),
+        supabase.from('product_variants').select('id', { count: 'exact', head: true }).lte('stock', threshold).gt('stock', 0),
+        supabase.from('product_variants').select('name, stock, product_id, products!product_id(name)').lte('stock', threshold).gt('stock', 0).order('stock', { ascending: true }).limit(5),
         supabase.from('orders').select('id, order_number, status, total, created_at, payment_status').order('created_at', { ascending: false }).limit(10),
         supabase.from('order_items').select('product_name, quantity, total').limit(5),
       ])
@@ -54,6 +55,7 @@ export default function Dashboard() {
         low_stock_count: lowStockRes.count || 0,
         recent_orders: recentRes.data || [],
         top_products: Object.entries(topProducts).map(([name, data]) => ({ name, ...data })),
+        low_stock_items: lowStockItems.data || [],
       }
     },
     refetchInterval: 30000,
@@ -117,9 +119,30 @@ export default function Dashboard() {
         </div>
 
         <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-5">
-          <h2 className="text-sm font-semibold text-[#173D22] mb-4">Top Selling Products</h2>
+          <h2 className="text-sm font-semibold text-[#173D22] mb-4">
+            {stats?.low_stock_items.length ? 'Low Stock Items' : 'Top Selling Products'}
+          </h2>
           {isLoading ? (
             <CardSkeleton lines={3} />
+          ) : stats?.low_stock_items.length > 0 ? (
+            <div className="space-y-3">
+              {stats.low_stock_items.map((item: any) => (
+                <Link
+                  key={item.product_id}
+                  to={`/products/${item.product_id}`}
+                  className="flex items-center justify-between py-2 border-b border-[rgba(23,61,34,0.06)] last:border-0 hover:bg-red-50 -mx-2 px-2 rounded transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle size={14} className="text-red-500 shrink-0" />
+                    <p className="text-sm font-medium text-[#173D22]">{item.products?.name || item.name}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-red-600">{item.stock} left</p>
+                    <p className="text-xs text-[#4C5A48]">{item.name}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
           ) : stats?.top_products.length === 0 ? (
             <p className="text-sm text-[#4C5A48]">No sales data yet.</p>
           ) : (
