@@ -21,8 +21,8 @@ export default function Dashboard() {
       const [ordersRes, countRes, lowStockRes, lowStockItems, recentRes, topRes] = await Promise.all([
         supabase.from('orders').select('total, status, created_at').gte('created_at', monthStart),
         supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'placed'),
-        supabase.from('product_variants').select('id', { count: 'exact', head: true }).lte('stock', threshold).gt('stock', 0),
-        supabase.from('product_variants').select('name, stock, product_id, products!product_id(name)').lte('stock', threshold).gt('stock', 0).order('stock', { ascending: true }).limit(5),
+        supabase.from('product_variants').select('id', { count: 'exact', head: true }).lte('stock', threshold),
+        supabase.from('product_variants').select('name, stock, product_id, products(name)').lte('stock', threshold).order('stock', { ascending: true }).limit(5),
         supabase.from('orders').select('id, order_number, status, total, created_at, payment_status').order('created_at', { ascending: false }).limit(10),
         supabase.from('order_items').select('product_name, quantity, total').limit(5),
       ])
