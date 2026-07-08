@@ -15,10 +15,13 @@ export default function Dashboard() {
       const weekStart = new Date(now.getTime() - 7 * 86400000).toISOString()
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
 
+      const settingsRes = await supabase.from('site_settings').select('low_stock_threshold').maybeSingle()
+      const threshold = (settingsRes.data as any)?.low_stock_threshold ?? 5
+
       const [ordersRes, countRes, lowStockRes, recentRes, topRes] = await Promise.all([
         supabase.from('orders').select('total, status, created_at').gte('created_at', monthStart),
         supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'placed'),
-        supabase.from('products').select('id', { count: 'exact', head: true }).lte('stock', 5).gt('stock', 0),
+        supabase.from('products').select('id', { count: 'exact', head: true }).lte('stock', threshold).gt('stock', 0),
         supabase.from('orders').select('id, order_number, status, total, created_at, payment_status').order('created_at', { ascending: false }).limit(10),
         supabase.from('order_items').select('product_name, quantity, total').limit(5),
       ])

@@ -5,7 +5,7 @@ import { supabaseAdmin as supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input, Select, Textarea } from '@/components/ui/input'
 import { useToast } from '@/components/ui/toast'
-import { ArrowLeft, Upload, X } from 'lucide-react'
+import { ArrowLeft, Upload, X, Clock } from 'lucide-react'
 import { productSchema } from '@/lib/validation'
 
 const defaultProduct = {
@@ -179,17 +179,41 @@ export default function ProductForm() {
       }
 
       for (const v of variants) {
+        const newStock = Number(v.stock) || 0
         const vPayload = {
           name: v.name, sku: v.sku,
           price: Number(v.price) || 0,
           compare_price: Number(v.compare_price) || 0,
-          stock: Number(v.stock) || 0,
+          stock: newStock,
           is_active: v.is_active,
         }
         if (v.id) {
+          const { data: old } = await supabase.from('product_variants').select('stock').eq('id', v.id).single()
           await supabase.from('product_variants').update(vPayload).eq('id', v.id)
+          if (old && old.stock !== newStock) {
+            await supabase.from('stock_logs').insert({
+              product_id: productId,
+              variant_id: v.id,
+              old_stock: old.stock,
+              new_stock: newStock,
+              change: newStock - old.stock,
+              reason: 'Manual update',
+              created_by: 'Admin',
+            })
+          }
         } else {
-          await supabase.from('product_variants').insert({ ...vPayload, product_id: productId })
+          const { data: inserted } = await supabase.from('product_variants').insert({ ...vPayload, product_id: productId }).select('id').single()
+          if (newStock > 0 && inserted) {
+            await supabase.from('stock_logs').insert({
+              product_id: productId,
+              variant_id: inserted.id,
+              old_stock: 0,
+              new_stock: newStock,
+              change: newStock,
+              reason: 'Initial stock',
+              created_by: 'Admin',
+            })
+          }
         }
       }
     },
@@ -330,6 +354,10 @@ export default function ProductForm() {
           </Button>
         </div>
 
+        {isEdit && (
+          <StockHistory productId={id!} />
+        )}
+
         <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-6 space-y-4">
           <h2 className="text-sm font-semibold text-[#173D22]">Badges</h2>
           <div className="flex flex-wrap gap-4">
@@ -396,5 +424,59 @@ export default function ProductForm() {
         </div>
       </div>
     </div>
+  )
+}
+
+function formatDate(d: string) {
+  try { return new Date(d).toLocaleString() } catch { return d }
+}
+
+function StockHistory({ productId }: { productId: string }) {
+  const { data: logs, isLoading } = useQuery({
+    queryKey: ['stock-logs', productId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('stock_logs')
+        .select('*, product_variants!variant_id(name)')
+        .eq('product_id', productId)
+        .order('created_at', { ascending: false })
+        .limit(20)
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!productId,
+  })
+
+  return (
+    <details className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-4 group">
+      <summary className="flex items-center gap-2 text-sm font-semibold text-[#173D22] cursor-pointer select-none">
+        <Clock size={14} /> Stock History
+      </summary>
+      <div className="mt-4 space-y-2">
+        {isLoading ? (
+          <p className="text-xs text-[#4C5A48]">Loading...</p>
+        ) : !logs?.length ? (
+          <p className="text-xs text-[#4C5A48]">No stock changes recorded yet.</p>
+        ) : (
+          logs.map((log: any) => (
+            <div key={log.id} className="flex items-center justify-between py-1.5 border-b border-[rgba(23,61,34,0.06)] last:border-0">
+              <div className="flex items-center gap-2 text-xs">
+                <span className={`font-medium ${log.change > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {log.change > 0 ? '+' : ''}{log.change}
+                </span>
+                <span className="text-[#4C5A48]">
+                  {log.old_stock} → {log.new_stock}
+                </span>
+                {log.product_variants?.name && (
+                  <span className="text-[#173D22] font-medium">{log.product_variants.name}</span>
+                )}
+                {log.reason && <span className="text-[#4C5A48]/60">· {log.reason}</span>}
+              </div>
+              <span className="text-[10px] text-[#4C5A48]/60">{formatDate(log.created_at)}</span>
+            </div>
+          ))
+        )}
+      </div>
+    </details>
   )
 }

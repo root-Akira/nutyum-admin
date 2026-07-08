@@ -20,6 +20,23 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS is_out_of_stock BOOLEAN DEFAULT fa
 ALTER TABLE products ADD COLUMN IF NOT EXISTS image_alts JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS compare_price DECIMAL(10,2) DEFAULT 0;
 ALTER TABLE coupons ADD COLUMN IF NOT EXISTS show_in_store BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS low_stock_threshold INTEGER NOT NULL DEFAULT 5;
+
+-- Stock change log
+CREATE TABLE IF NOT EXISTS stock_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL,
+  old_stock INTEGER NOT NULL DEFAULT 0,
+  new_stock INTEGER NOT NULL DEFAULT 0,
+  change INTEGER NOT NULL DEFAULT 0,
+  reason TEXT,
+  created_by TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE stock_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Admin full access on stock_logs" ON stock_logs FOR ALL TO authenticated USING (true) WITH CHECK (true);
 ALTER TABLE products ADD COLUMN IF NOT EXISTS sku TEXT;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS stock INTEGER DEFAULT 0;
 
@@ -134,6 +151,7 @@ CREATE TABLE IF NOT EXISTS site_settings (
   cod_enabled BOOLEAN NOT NULL DEFAULT true,
   cod_charge DECIMAL(10,2) NOT NULL DEFAULT 0,
   maintenance_mode BOOLEAN NOT NULL DEFAULT false,
+  low_stock_threshold INTEGER NOT NULL DEFAULT 5,
   social_links JSONB DEFAULT '{}'::jsonb,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
