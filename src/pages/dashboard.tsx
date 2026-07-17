@@ -124,7 +124,7 @@ export default function Dashboard() {
           </h2>
           {isLoading ? (
             <CardSkeleton lines={3} />
-          ) : stats?.low_stock_items.length > 0 ? (
+          ) : stats?.low_stock_items?.length ? (
             <div className="space-y-3">
               {stats.low_stock_items.map((item: any) => (
                 <Link

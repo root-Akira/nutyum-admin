@@ -347,13 +347,13 @@ export default function ProductForm() {
                   const next = [...variants]; next[i] = { ...next[i], sku: e.target.value }; setVariants(next)
                 }} placeholder="e.g. MKN-100" />
                 <Input label="Price (₹)" type="number" min={0} value={v.price} onChange={e => {
-                  const next = [...variants]; next[i] = { ...next[i], price: e.target.value }; setVariants(next)
+                  const next = [...variants]; next[i] = { ...next[i], price: Number(e.target.value) }; setVariants(next)
                 }} />
                 <Input label="Compare Price (₹)" type="number" min={0} value={v.compare_price} onChange={e => {
-                  const next = [...variants]; next[i] = { ...next[i], compare_price: e.target.value }; setVariants(next)
+                  const next = [...variants]; next[i] = { ...next[i], compare_price: Number(e.target.value) }; setVariants(next)
                 }} />
                 <Input label="Stock" type="number" min={0} value={v.stock} onChange={e => {
-                  const next = [...variants]; next[i] = { ...next[i], stock: e.target.value }; setVariants(next)
+                  const next = [...variants]; next[i] = { ...next[i], stock: Number(e.target.value) }; setVariants(next)
                 }} />
                 <label className="flex items-center gap-2 text-sm text-[#173D22] pt-6">
                   <input type="checkbox" checked={v.is_active} onChange={e => {
