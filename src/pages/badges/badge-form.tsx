@@ -31,13 +31,19 @@ export default function BadgeForm() {
     enabled: isEdit,
   })
 
+  // Store original label to sync product badges on rename
+  const [originalLabel, setOriginalLabel] = useState('')
+
   useEffect(() => {
-    if (badge) setForm({
-      label: badge.label || '',
-      slug: badge.slug || '',
-      color: badge.color || '#173D22',
-      is_active: badge.is_active ?? true,
-    })
+    if (badge) {
+      setForm({
+        label: badge.label || '',
+        slug: badge.slug || '',
+        color: badge.color || '#173D22',
+        is_active: badge.is_active ?? true,
+      })
+      setOriginalLabel(badge.label || '')
+    }
   }, [badge])
 
   const autoSlug = (label: string) =>
@@ -60,6 +66,15 @@ export default function BadgeForm() {
       if (isEdit) {
         const { error } = await supabase.from('badges').update(payload).eq('id', id!)
         if (error) throw error
+
+        // Sync label change to all products using the old label
+        if (originalLabel !== form.label) {
+          const { error: syncErr } = await supabase
+            .from('products')
+            .update({ badge_label: form.label })
+            .eq('badge_label', originalLabel)
+          if (syncErr) throw syncErr
+        }
       } else {
         const { error } = await supabase.from('badges').insert({ ...payload, created_at: new Date().toISOString() })
         if (error) throw error
@@ -67,7 +82,8 @@ export default function BadgeForm() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['badges'] })
-      toast(isEdit ? 'Badge updated' : 'Badge created', 'success')
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+      toast(isEdit ? 'Badge updated — products synced' : 'Badge created', 'success')
       navigate('/badges')
     },
     onError: (e) => toast(`Failed to save: ${e}`, 'error'),

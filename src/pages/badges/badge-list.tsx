@@ -23,7 +23,26 @@ export default function BadgeList() {
       if (search) query = query.ilike('label', `%${search}%`)
       const { data, error } = await query
       if (error) throw error
-      return data || []
+
+      // Count products using each badge
+      const badgesData = data || []
+      const labels = badgesData.map((b: { label: string }) => b.label)
+      if (labels.length > 0) {
+        const { data: products } = await supabase
+          .from('products')
+          .select('badge_label')
+          .in('badge_label', labels)
+        const counts: Record<string, number> = {}
+        for (const p of products || []) {
+          const lbl = p.badge_label as string
+          counts[lbl] = (counts[lbl] || 0) + 1
+        }
+        return badgesData.map((b: { label: string; [key: string]: unknown }) => ({
+          ...b,
+          productCount: counts[b.label] || 0,
+        }))
+      }
+      return badgesData
     },
   })
 
@@ -67,25 +86,29 @@ export default function BadgeList() {
               <TableHeaderCell>Label</TableHeaderCell>
               <TableHeaderCell>Slug</TableHeaderCell>
               <TableHeaderCell>Color</TableHeaderCell>
+              <TableHeaderCell>Products</TableHeaderCell>
               <TableHeaderCell>Status</TableHeaderCell>
               <TableHeaderCell className="text-right">Actions</TableHeaderCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {badges.map((badge) => (
-              <TableRow key={badge.id}>
+            {badges.map((badge: Record<string, unknown>) => (
+              <TableRow key={badge.id as string}>
                 <TableCell>
-                  <span className="font-medium text-[#173D22]">{badge.label}</span>
+                  <span className="font-medium text-[#173D22]">{badge.label as string}</span>
                 </TableCell>
-                <TableCell className="text-sm text-[#4C5A48]">{badge.slug}</TableCell>
+                <TableCell className="text-sm text-[#4C5A48]">{badge.slug as string}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <div className="h-5 w-5 rounded border border-[rgba(23,61,34,0.15)]" style={{ backgroundColor: badge.color }} />
-                    <span className="text-xs font-mono text-[#4C5A48]">{badge.color}</span>
+                    <div className="h-5 w-5 rounded border border-[rgba(23,61,34,0.15)]" style={{ backgroundColor: badge.color as string }} />
+                    <span className="text-xs font-mono text-[#4C5A48]">{badge.color as string}</span>
                   </div>
                 </TableCell>
                 <TableCell>
-                  {badge.is_active ? <StatusBadge status="active" /> : <StatusBadge status="draft" />}
+                  <span className="text-sm font-medium text-[#173D22]">{(badge.productCount as number) || 0}</span>
+                </TableCell>
+                <TableCell>
+                  {(badge as any).is_active ? <StatusBadge status="active" /> : <StatusBadge status="draft" />}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
