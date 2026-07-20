@@ -166,15 +166,16 @@ export default function ProductForm() {
       if (!validate()) throw new Error('Please fix validation errors')
 
       const label = form.badge_label
-      const payload = {
+      const payload: Record<string, unknown> = {
         ...form,
         price: Number(form.price) || 0,
         compare_price: Number(form.compare_price) || 0,
         slug: form.slug || makeSlug(form.name),
-        // Auto-sync boolean flags from badge_label
-        is_new: label === 'NEW' || form.is_new,
-        is_best_seller: label === 'BESTSELLER' || form.is_best_seller,
-        is_coming_soon: label === 'COMING SOON' || form.is_coming_soon,
+      }
+      if (label) {
+        payload.is_new = label === 'NEW'
+        payload.is_best_seller = label === 'BESTSELLER'
+        payload.is_coming_soon = label === 'COMING SOON'
       }
 
       let productId = id
