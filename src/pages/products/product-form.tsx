@@ -410,20 +410,6 @@ export default function ProductForm() {
               </div>
             )}
           </div>
-          <div className="flex flex-wrap gap-4 pt-2 border-t border-[rgba(23,61,34,0.06)]">
-            <label className="flex items-center gap-2 text-sm text-[#173D22] cursor-pointer">
-              <input type="checkbox" checked={form.is_new} onChange={e => update('is_new', e.target.checked)} className="rounded border-[rgba(23,61,34,0.3)] accent-[#173D22]" />
-              New
-            </label>
-            <label className="flex items-center gap-2 text-sm text-[#173D22] cursor-pointer">
-              <input type="checkbox" checked={form.is_best_seller} onChange={e => update('is_best_seller', e.target.checked)} className="rounded border-[rgba(23,61,34,0.3)] accent-[#173D22]" />
-              Best Seller
-            </label>
-            <label className="flex items-center gap-2 text-sm text-[#173D22] cursor-pointer">
-              <input type="checkbox" checked={form.is_coming_soon} onChange={e => update('is_coming_soon', e.target.checked)} className="rounded border-[rgba(23,61,34,0.3)] accent-[#173D22]" />
-              Coming Soon
-            </label>
-          </div>
         </div>
 
         <details className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-4 group">
