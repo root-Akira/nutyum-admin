@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import {
-  LayoutDashboard, Package, ShoppingCart, Users, Star, Ticket,
+  LayoutDashboard, Package, ShoppingCart, Users, Star, Ticket, Award,
   FileText, Tag, Tags, Truck, CreditCard, Settings, LogOut,
 } from 'lucide-react'
 
@@ -19,6 +19,7 @@ const navGroups = [
       { to: '/orders', label: 'Orders', icon: ShoppingCart },
       { to: '/customers', label: 'Customers', icon: Users },
       { to: '/reviews', label: 'Reviews', icon: Star },
+      { to: '/badges', label: 'Badges', icon: Award },
       { to: '/coupons', label: 'Coupons', icon: Ticket },
     ],
   },

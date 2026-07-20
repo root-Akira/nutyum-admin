@@ -13,6 +13,7 @@ const titles: Record<string, string> = {
   '/orders': 'Orders',
   '/customers': 'Customers',
   '/reviews': 'Reviews',
+  '/badges': 'Badges',
   '/coupons': 'Coupons',
   '/cms/categories': 'Categories',
   '/cms/vibes': 'Vibes',
@@ -27,6 +28,7 @@ export function DashboardLayout({ onSignOut }: DashboardLayoutProps) {
   const { pathname } = useLocation()
 
   const isProductForm = pathname.startsWith('/products/') && pathname !== '/products'
+  const isBadgeForm = pathname.startsWith('/badges/') && pathname !== '/badges'
   const isCouponForm = pathname.startsWith('/coupons/') && pathname !== '/coupons'
   const isOrderDetail = pathname.startsWith('/orders/') && pathname !== '/orders'
   const isCustomerDetail = pathname.startsWith('/customers/') && pathname !== '/customers'
@@ -34,6 +36,7 @@ export function DashboardLayout({ onSignOut }: DashboardLayoutProps) {
 
   let title = titles[pathname]
   if (isProductForm) title = pathname.includes('/new') ? 'Add Product' : 'Edit Product'
+  else if (isBadgeForm) title = pathname.includes('/new') ? 'Add Badge' : 'Edit Badge'
   else if (isCouponForm) title = pathname.includes('/new') ? 'Add Coupon' : 'Edit Coupon'
   else if (isOrderDetail) title = 'Order Detail'
   else if (isCustomerDetail) title = 'Customer Detail'

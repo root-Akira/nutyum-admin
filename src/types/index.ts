@@ -190,6 +190,15 @@ export interface SiteSettings {
   social_links: Record<string, string>
 }
 
+export interface Badge {
+  id: string
+  label: string
+  slug: string
+  color: string
+  is_active: boolean
+  created_at: string
+}
+
 export interface DashboardStats {
   total_orders_today: number
   total_orders_week: number

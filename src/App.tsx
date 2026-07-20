@@ -14,6 +14,8 @@ const CustomerDetail = lazy(() => import('@/pages/customers/customer-detail'))
 const ReviewList = lazy(() => import('@/pages/reviews/review-list'))
 const CouponList = lazy(() => import('@/pages/coupons/coupon-list'))
 const CouponForm = lazy(() => import('@/pages/coupons/coupon-form'))
+const BadgeList = lazy(() => import('@/pages/badges/badge-list'))
+const BadgeForm = lazy(() => import('@/pages/badges/badge-form'))
 const CategoriesList = lazy(() => import('@/pages/cms/categories-list'))
 const VibesList = lazy(() => import('@/pages/cms/vibes-list'))
 const CmsPages = lazy(() => import('@/pages/cms/pages'))
@@ -62,6 +64,9 @@ export default function App() {
           <Route path="/customers" element={<CustomerList />} />
           <Route path="/customers/:id" element={<CustomerDetail />} />
           <Route path="/reviews" element={<ReviewList />} />
+          <Route path="/badges" element={<BadgeList />} />
+          <Route path="/badges/new" element={<BadgeForm />} />
+          <Route path="/badges/:id" element={<BadgeForm />} />
           <Route path="/coupons" element={<CouponList />} />
           <Route path="/coupons/new" element={<CouponForm />} />
           <Route path="/coupons/:id" element={<CouponForm />} />
