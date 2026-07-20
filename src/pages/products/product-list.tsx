@@ -69,6 +69,8 @@ export default function ProductList() {
 
   const bulkDeleteMutation = useMutation({
     mutationFn: async (ids: string[]) => {
+      const { error: ve } = await supabase.from('product_variants').delete().in('product_id', ids)
+      if (ve) throw ve
       const { error } = await supabase.from('products').delete().in('id', ids)
       if (error) throw error
     },
@@ -96,6 +98,17 @@ export default function ProductList() {
         const { error } = await supabase.from('products').update({ price: update.price }).eq('id', update.id)
         if (error) throw error
       }
+      // Also update all variant prices for selected products
+      const variants = (await supabase.from('product_variants').select('id, price, product_id').in('product_id', ids)).data || []
+      for (const v of variants) {
+        let newPrice = v.price
+        if (mode === 'set') newPrice = Math.round(value)
+        else if (mode === 'add') newPrice = Math.round(v.price + value)
+        else if (mode === 'percent') newPrice = Math.round(v.price * (1 + value / 100))
+        if (newPrice < 0) newPrice = 0
+        const { error } = await supabase.from('product_variants').update({ price: newPrice }).eq('id', v.id)
+        if (error) throw error
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] })
@@ -111,6 +124,8 @@ export default function ProductList() {
     mutationFn: async ({ ids, value }: { ids: string[]; value: number }) => {
       const { error } = await supabase.from('products').update({ stock: value }).in('id', ids)
       if (error) throw error
+      const { error: ve } = await supabase.from('product_variants').update({ stock: value }).in('product_id', ids)
+      if (ve) throw ve
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] })
