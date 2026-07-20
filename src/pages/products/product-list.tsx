@@ -28,7 +28,27 @@ export default function ProductList() {
       if (search) query = query.ilike('name', `%${search}%`)
       const result = await query
       if (result.error) throw result.error
-      return result.data || []
+      const products = result.data || []
+      // Enrich products with 0 price using min variant price
+      const zeroPriceIds = products.filter(p => !p.price).map(p => p.id)
+      if (zeroPriceIds.length > 0) {
+        const { data: variants } = await supabase
+          .from('product_variants')
+          .select('product_id, price')
+          .in('product_id', zeroPriceIds)
+        if (variants) {
+          const minPrices: Record<string, number> = {}
+          for (const v of variants) {
+            const pid = v.product_id
+            const price = Number(v.price) || 0
+            if (!minPrices[pid] || price < minPrices[pid]) minPrices[pid] = price
+          }
+          for (const p of products) {
+            if (!p.price && minPrices[p.id]) p.price = minPrices[p.id]
+          }
+        }
+      }
+      return products
     },
   })
 
