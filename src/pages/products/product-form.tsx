@@ -166,9 +166,14 @@ export default function ProductForm() {
       if (!validate()) throw new Error('Please fix validation errors')
 
       const label = form.badge_label
+      let basePrice = Number(form.price) || 0
+      if (basePrice === 0 && variants.length > 0) {
+        const variantPrices = variants.map(v => Number(v.price)).filter(Boolean)
+        if (variantPrices.length > 0) basePrice = Math.min(...variantPrices)
+      }
       const payload: Record<string, unknown> = {
         ...form,
-        price: Number(form.price) || 0,
+        price: basePrice,
         compare_price: Number(form.compare_price) || 0,
         slug: form.slug || makeSlug(form.name),
       }
