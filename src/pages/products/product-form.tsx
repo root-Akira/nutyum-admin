@@ -11,7 +11,7 @@ import { productSchema } from '@/lib/validation'
 const defaultProduct = {
   name: '', slug: '', description: '', category: '',
   price: '' as string | number, compare_price: '' as string | number, images: [] as string[],
-  weight: '', is_new: false, is_best_seller: false, is_coming_soon: false,
+  weight: '', is_new: false, is_best_seller: false, is_coming_soon: false, badge_label: '' as string,
   ingredients: [] as string[],
   vibes: [] as string[],
 }
@@ -90,6 +90,15 @@ export default function ProductForm() {
     },
   })
 
+  const { data: badges = [] } = useQuery({
+    queryKey: ['badges'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('badges').select('*').eq('is_active', true).order('label')
+      if (error) return []
+      return data || []
+    },
+  })
+
   const { data: existingVariants = [] } = useQuery({
     queryKey: ['product-variants', id],
     queryFn: async () => {
@@ -115,6 +124,7 @@ export default function ProductForm() {
         is_new: product.is_new ?? false,
         is_best_seller: product.is_best_seller ?? false,
         is_coming_soon: product.is_coming_soon ?? false,
+        badge_label: product.badge_label || '',
 
         ingredients: product.ingredients || [],
         vibes: product.vibes || [],
@@ -375,7 +385,32 @@ export default function ProductForm() {
 
         <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-6 space-y-4">
           <h2 className="text-sm font-semibold text-[#173D22]">Badges</h2>
-          <div className="flex flex-wrap gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-medium text-[#4C5A48] block mb-1">Display Badge</label>
+              <select
+                value={form.badge_label}
+                onChange={e => update('badge_label', e.target.value)}
+                className="w-full rounded-lg border border-[rgba(23,61,34,0.15)] bg-[#FFFEFB] px-3.5 py-2 text-sm text-[#173D22] outline-none focus:border-[#173D22] transition-colors"
+              >
+                <option value="">None</option>
+                {badges.map((b: { id: string; label: string; color: string }) => (
+                  <option key={b.id} value={b.label}>{b.label}</option>
+                ))}
+              </select>
+            </div>
+            {form.badge_label && (
+              <div className="flex items-end pb-2">
+                <span
+                  className="inline-block border-2 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white"
+                  style={{ borderColor: badges.find((b: { label: string }) => b.label === form.badge_label)?.color || '#173D22', backgroundColor: badges.find((b: { label: string }) => b.label === form.badge_label)?.color || '#173D22' }}
+                >
+                  {form.badge_label}
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-4 pt-2 border-t border-[rgba(23,61,34,0.06)]">
             <label className="flex items-center gap-2 text-sm text-[#173D22] cursor-pointer">
               <input type="checkbox" checked={form.is_new} onChange={e => update('is_new', e.target.checked)} className="rounded border-[rgba(23,61,34,0.3)] accent-[#173D22]" />
               New
