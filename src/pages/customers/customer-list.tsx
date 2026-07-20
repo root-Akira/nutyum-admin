@@ -19,23 +19,15 @@ interface CustomerRow {
   is_blocked: boolean
 }
 
-const API_URL = import.meta.env.VITE_SUPABASE_URL
-
 export default function CustomerList() {
   const [search, setSearch] = useState('')
 
   const { data: customers, isLoading } = useQuery({
     queryKey: ['customers', search],
     queryFn: async () => {
-      const res = await fetch(`${API_URL}/auth/v1/admin/users`, {
-        headers: {
-          apikey: import.meta.env.VITE_SUPABASE_SERVICE_ROLE,
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_SERVICE_ROLE}`,
-        },
-      })
-      if (!res.ok) throw new Error('Failed to fetch users')
-      const body = await res.json()
-      const users: any[] = body.users || []
+      const { data: usersData, error } = await supabaseAdmin.auth.admin.listUsers()
+      if (error) throw error
+      const users = usersData?.users || []
 
       // Get order stats per user (if orders table exists)
       let orderCounts: Record<string, number> = {}
@@ -48,7 +40,7 @@ export default function CustomerList() {
             spentByUser[o.user_id] = (spentByUser[o.user_id] || 0) + Number(o.total || 0)
           }
         }
-      } catch { /* orders table may not exist yet */ }
+      } catch { console.warn('Orders table not available yet') }
 
       let rows: CustomerRow[] = users.map(u => ({
         id: u.id,

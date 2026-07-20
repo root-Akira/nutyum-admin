@@ -68,8 +68,8 @@ export default function ReviewList() {
           <TableBody>
             {approvedReviews.map((review) => (
               <TableRow key={review.id}>
-                <TableCell className="font-medium">{review.product || '—'}</TableCell>
-                <TableCell>{review.name || 'Anonymous'}</TableCell>
+<TableCell className="font-medium">{review.product_name || '—'}</TableCell>
+<TableCell>{review.user_name || 'Anonymous'}</TableCell>
                 <TableCell>
                   <span className="text-[#E0961A] font-semibold">{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</span>
                 </TableCell>

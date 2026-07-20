@@ -127,7 +127,7 @@ export default function BadgeList() {
                     <span className="text-sm font-medium text-[#173D22]">{(badge.productCount as number) || 0}</span>
                   </TableCell>
                   <TableCell>
-                    {(badge as any).is_active ? <StatusBadge status="active" /> : <StatusBadge status="draft" />}
+                    {badge.is_active ? <StatusBadge status="active" /> : <StatusBadge status="draft" />}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">

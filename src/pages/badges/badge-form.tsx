@@ -69,9 +69,9 @@ export default function BadgeForm() {
     mutationFn: async () => {
       if (!validate()) throw new Error('Please fix validation errors')
 
-      const payload = { ...form }
+      const payload: Record<string, unknown> = { ...form }
       if (isEdit) {
-        ;(payload as any).updated_at = new Date().toISOString()
+        payload.updated_at = new Date().toISOString()
         const { error } = await supabase.from('badges').update(payload).eq('id', id!)
         if (error) throw error
 

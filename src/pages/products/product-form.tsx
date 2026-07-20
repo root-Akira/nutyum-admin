@@ -54,7 +54,7 @@ export default function ProductForm() {
           const text = await data.text()
           stored = JSON.parse(text)
         }
-      } catch { /* not yet stored */ }
+      } catch { console.warn('Categories not yet stored') }
 
       return stored.length > 0
         ? stored
@@ -77,7 +77,7 @@ export default function ProductForm() {
           const text = await data.text()
           stored = JSON.parse(text)
         }
-      } catch { /* not yet stored */ }
+      } catch { console.warn('Vibes not yet stored') }
 
       return stored.length > 0
         ? stored
@@ -246,13 +246,24 @@ export default function ProductForm() {
     },
     onError: (e) => {
       console.error('Save error:', e)
-      console.error('Save error message:', e.message)
-      console.error('Save error details:', JSON.stringify(e))
       toast(`Failed to save: ${e.message}`, 'error')
     },
   })
 
-  if (isEdit && isLoading) return <div className="py-10 text-center text-[#4C5A48]">Loading...</div>
+  if (isEdit && isLoading) {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <div className="h-4 w-24 rounded-lg bg-[rgba(23,61,34,0.06)] animate-pulse mb-6" />
+        <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-6">
+          <div className="animate-pulse space-y-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="h-10 rounded-lg bg-[rgba(23,61,34,0.06)]" />
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const update = (key: string, value: any) => {
     if (errors[key]) setErrors(prev => { const n = { ...prev }; delete n[key]; return n })
@@ -283,21 +294,6 @@ export default function ProductForm() {
     const file = e.target.files?.[0]
     if (file) uploadImage(file)
     e.target.value = ''
-  }
-
-  if (isEdit && isLoading) {
-    return (
-      <div className="max-w-3xl mx-auto">
-        <div className="h-4 w-24 rounded-lg bg-[rgba(23,61,34,0.06)] animate-pulse mb-6" />
-        <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-6">
-          <div className="animate-pulse space-y-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="h-10 rounded-lg bg-[rgba(23,61,34,0.06)]" />
-            ))}
-          </div>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -384,7 +380,7 @@ export default function ProductForm() {
               </div>
             </div>
           ))}
-          <Button variant="secondary" onClick={() => setVariants(prev => [...prev, { name: '', sku: '', price: '' as any, compare_price: '' as any, stock: '' as any, is_active: true }])} type="button">
+          <Button variant="secondary" onClick={() => setVariants(prev => [...prev, { name: '', sku: '', price: 0, compare_price: 0, stock: 0, is_active: true }])} type="button">
             + Add Variant
           </Button>
         </div>

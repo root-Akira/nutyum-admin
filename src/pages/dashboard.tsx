@@ -16,7 +16,7 @@ export default function Dashboard() {
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
 
       const settingsRes = await supabase.from('site_settings').select('low_stock_threshold').maybeSingle()
-      const threshold = (settingsRes.data as any)?.low_stock_threshold ?? 5
+      const threshold = settingsRes.data?.low_stock_threshold ?? 5
 
       const [ordersRes, countRes, lowStockRes, lowStockItems, recentRes, topRes] = await Promise.all([
         supabase.from('orders').select('total, status, created_at').gte('created_at', monthStart),

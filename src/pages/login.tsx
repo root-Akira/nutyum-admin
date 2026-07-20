@@ -31,10 +31,11 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wider text-[#4C5A48] block mb-1.5">
+            <label htmlFor="login-email" className="text-xs font-semibold uppercase tracking-wider text-[#4C5A48] block mb-1.5">
               Email
             </label>
             <input
+              id="login-email"
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
@@ -44,10 +45,11 @@ export default function Login() {
             />
           </div>
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wider text-[#4C5A48] block mb-1.5">
+            <label htmlFor="login-password" className="text-xs font-semibold uppercase tracking-wider text-[#4C5A48] block mb-1.5">
               Password
             </label>
             <input
+              id="login-password"
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}

@@ -23,8 +23,8 @@ export function ConfirmModal({
       await onConfirm()
     } finally {
       setLoading(false)
+      onClose()
     }
-    onClose()
   }
 
   return (

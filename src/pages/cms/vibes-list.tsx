@@ -33,7 +33,7 @@ export default function VibesList() {
           const text = await data.text()
           stored = JSON.parse(text)
         }
-      } catch { /* not yet stored */ }
+      } catch { console.warn('Vibes not yet stored') }
 
       if (stored.length > 0) {
         setVibes(stored)

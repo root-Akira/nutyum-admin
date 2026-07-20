@@ -10,8 +10,6 @@ import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { useToast } from '@/components/ui/toast'
 import { ArrowLeft, Mail, Phone, MapPin, Ban, CheckCircle } from 'lucide-react'
 
-const API_URL = import.meta.env.VITE_SUPABASE_URL
-
 export default function CustomerDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -22,14 +20,9 @@ export default function CustomerDetail() {
   const { data: customer, isLoading } = useQuery({
     queryKey: ['customer', id],
     queryFn: async () => {
-      const res = await fetch(`${API_URL}/auth/v1/admin/users/${id}`, {
-        headers: {
-          apikey: import.meta.env.VITE_SUPABASE_SERVICE_ROLE,
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_SERVICE_ROLE}`,
-        },
-      })
-      if (!res.ok) throw new Error('Failed to fetch user')
-      const user = await res.json()
+      const { data: userData, error } = await supabaseAdmin.auth.admin.getUserById(id!)
+      if (error || !userData?.user) throw error || new Error('User not found')
+      const user = userData.user
 
       let orderCount = 0
       let totalSpent = 0
@@ -42,7 +35,7 @@ export default function CustomerDetail() {
           orderCount = ordersData.length
           totalSpent = ordersData.reduce((sum, o) => sum + Number(o.total || 0), 0)
         }
-      } catch { /* orders table may not exist */ }
+      } catch { console.warn('Orders table not available yet') }
 
       return {
         id: user.id,

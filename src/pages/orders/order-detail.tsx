@@ -63,7 +63,7 @@ export default function OrderDetail() {
 
   const updateMutation = useMutation({
     mutationFn: async () => {
-      const payload: any = {}
+      const payload: Record<string, unknown> = {}
       if (status) payload.status = status
       if (tracking) payload.tracking_number = tracking
       if (courier) payload.courier = courier
@@ -72,6 +72,14 @@ export default function OrderDetail() {
       payload.updated_at = new Date().toISOString()
       const { error } = await supabase.from('orders').update(payload).eq('id', id!)
       if (error) throw error
+      if (status) {
+        const { error: logErr } = await supabase.from('order_status_logs').insert({
+          order_id: id!,
+          status,
+          note: `Status updated by admin`,
+        })
+        if (logErr) console.error('Failed to log status change:', logErr)
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['order', id] })

@@ -3,7 +3,7 @@ export function CardSkeleton({ lines = 1 }: { lines?: number }) {
     <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-5">
       <div className="animate-pulse space-y-3">
         {Array.from({ length: lines }).map((_, i) => (
-          <div key={i} className="h-4 rounded-lg bg-[rgba(23,61,34,0.06)]" style={{ width: `${60 + Math.random() * 40}%` }} />
+          <div key={i} className="h-4 rounded-lg bg-[rgba(23,61,34,0.06)]" style={{ width: `${60 + (i * 13) % 40}%` }} />
         ))}
       </div>
     </div>
