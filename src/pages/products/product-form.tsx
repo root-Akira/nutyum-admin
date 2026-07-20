@@ -165,12 +165,16 @@ export default function ProductForm() {
     mutationFn: async () => {
       if (!validate()) throw new Error('Please fix validation errors')
 
+      const label = form.badge_label
       const payload = {
         ...form,
         price: Number(form.price) || 0,
         compare_price: Number(form.compare_price) || 0,
         slug: form.slug || makeSlug(form.name),
-
+        // Auto-sync boolean flags from badge_label
+        is_new: label === 'NEW' || form.is_new,
+        is_best_seller: label === 'BESTSELLER' || form.is_best_seller,
+        is_coming_soon: label === 'COMING SOON' || form.is_coming_soon,
       }
 
       let productId = id
