@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabaseAdmin as supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
@@ -7,17 +7,27 @@ import { Input } from '@/components/ui/input'
 import { useToast } from '@/components/ui/toast'
 import { ArrowLeft } from 'lucide-react'
 
+function autoSlug(label: string) {
+  return label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
+
 const defaultBadge = {
   label: '', slug: '', color: '#173D22', is_active: true,
 }
 
 export default function BadgeForm() {
   const { id } = useParams()
+  const [searchParams] = useSearchParams()
   const isEdit = !!id
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { toast } = useToast()
-  const [form, setForm] = useState(defaultBadge)
+  const importLabel = searchParams.get('label')
+  const [form, setForm] = useState(
+    importLabel
+      ? { ...defaultBadge, label: importLabel, slug: autoSlug(importLabel) }
+      : defaultBadge
+  )
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const { data: badge, isLoading } = useQuery({
@@ -46,9 +56,6 @@ export default function BadgeForm() {
     }
   }, [badge])
 
-  const autoSlug = (label: string) =>
-    label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-
   const validate = () => {
     const errs: Record<string, string> = {}
     if (!form.label.trim()) errs.label = 'Label is required'
@@ -62,8 +69,9 @@ export default function BadgeForm() {
     mutationFn: async () => {
       if (!validate()) throw new Error('Please fix validation errors')
 
-      const payload = { ...form, updated_at: new Date().toISOString() }
+      const payload = { ...form }
       if (isEdit) {
+        ;(payload as any).updated_at = new Date().toISOString()
         const { error } = await supabase.from('badges').update(payload).eq('id', id!)
         if (error) throw error
 
