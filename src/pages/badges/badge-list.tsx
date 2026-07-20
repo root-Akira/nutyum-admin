@@ -115,7 +115,7 @@ export default function BadgeList() {
                     <Link to={`/badges/${badge.id}`}>
                       <Button variant="ghost" size="sm"><Edit size={14} /></Button>
                     </Link>
-                    <Button variant="ghost" size="sm" onClick={() => setDeleteId(badge.id)}><Trash2 size={14} className="text-red-500" /></Button>
+                    <Button variant="ghost" size="sm" onClick={() => setDeleteId(badge.id as string)}><Trash2 size={14} className="text-red-500" /></Button>
                   </div>
                 </TableCell>
               </TableRow>
