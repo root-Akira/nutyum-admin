@@ -11,7 +11,7 @@ export default function SiteSettings() {
   const { toast } = useToast()
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [form, setForm] = useState({
-    store_name: 'Nutyum', store_email: '', store_phone: '', store_address: '',
+    id: '', store_name: 'Nutyum', store_email: '', store_phone: '', store_address: '',
     currency: 'INR', gst_number: '', cod_enabled: true, cod_charge: '' as string | number,
     maintenance_mode: false, low_stock_threshold: 5, social_links: '{}',
   })
@@ -28,7 +28,7 @@ export default function SiteSettings() {
   useEffect(() => {
     if (settings) {
       setForm({
-        store_name: settings.store_name || 'Nutyum',
+        id: settings.id, store_name: settings.store_name || 'Nutyum',
         store_email: settings.store_email || '',
         store_phone: settings.store_phone || '',
         store_address: settings.store_address || '',
