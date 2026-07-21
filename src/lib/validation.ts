@@ -42,5 +42,4 @@ export const siteSettingsSchema = z.object({
   cod_charge: z.coerce.number().min(0, 'COD charge must be 0 or more'),
   maintenance_mode: z.boolean(),
   low_stock_threshold: z.coerce.number().int().min(0),
-  social_links: z.string(),
 })

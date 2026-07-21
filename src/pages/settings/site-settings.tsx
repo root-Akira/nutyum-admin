@@ -13,7 +13,7 @@ export default function SiteSettings() {
   const [form, setForm] = useState({
     id: '', store_name: 'Nutyum', store_email: '', store_phone: '', store_address: '',
     gst_number: '', cod_enabled: true, cod_charge: '' as string | number,
-    maintenance_mode: false, low_stock_threshold: 5, social_links: '{}',
+    maintenance_mode: false, low_stock_threshold: 5,
   })
 
   const { data: settings, isLoading } = useQuery({
@@ -37,7 +37,6 @@ export default function SiteSettings() {
         cod_charge: settings.cod_charge || 0,
         maintenance_mode: settings.maintenance_mode || false,
         low_stock_threshold: settings.low_stock_threshold ?? 5,
-        social_links: typeof settings.social_links === 'string' ? settings.social_links : JSON.stringify(settings.social_links || {}),
       })
     }
   }, [settings])
@@ -61,9 +60,7 @@ export default function SiteSettings() {
     mutationFn: async () => {
       if (!validate()) throw new Error('Please fix validation errors')
       const { id, ...fields } = form
-      let social_links: unknown = form.social_links
-      try { social_links = JSON.parse(form.social_links) } catch { social_links = form.social_links }
-      const payload = { ...fields, cod_charge: Number(form.cod_charge) || 0, social_links }
+      const payload = { ...fields, cod_charge: Number(form.cod_charge) || 0 }
       const { error } = await supabase.from('site_settings').update(payload).eq('id', id)
       if (error) throw error
     },
@@ -105,11 +102,6 @@ export default function SiteSettings() {
           <input type="checkbox" checked={form.maintenance_mode} onChange={e => update('maintenance_mode', e.target.checked)} className="rounded border-[rgba(23,61,34,0.3)]" />
           Maintenance Mode (store offline)
         </label>
-      </div>
-
-      <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-6 space-y-4">
-        <h2 className="text-sm font-semibold text-[#173D22]">Social Links (JSON)</h2>
-        <Textarea value={form.social_links} onChange={e => update('social_links', e.target.value)} rows={3} />
       </div>
 
       <div className="flex justify-end">
