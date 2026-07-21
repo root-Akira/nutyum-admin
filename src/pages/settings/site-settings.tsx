@@ -61,8 +61,11 @@ export default function SiteSettings() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!validate()) throw new Error('Please fix validation errors')
-      const payload = { ...form, cod_charge: Number(form.cod_charge) || 0, social_links: form.social_links }
-      const { error } = await supabase.from('site_settings').upsert(payload)
+      const { id, ...fields } = form
+      let social_links: unknown = form.social_links
+      try { social_links = JSON.parse(form.social_links) } catch { social_links = form.social_links }
+      const payload = { ...fields, cod_charge: Number(form.cod_charge) || 0, social_links }
+      const { error } = await supabase.from('site_settings').update(payload).eq('id', id)
       if (error) throw error
     },
     onSuccess: () => { toast('Settings saved', 'success') },
