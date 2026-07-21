@@ -83,12 +83,12 @@ export default function OrderDetail() {
         if (logErr) console.error('Failed to log status change:', logErr)
       }
     },
-    onSuccess: async (_, variables) => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['order', id] })
       toast('Order updated', 'success')
       if (status === 'shipped' || status === 'out_for_delivery') {
         try {
-          await fetch(NOTIFY_API, {
+          const res = await fetch(NOTIFY_API, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -97,8 +97,12 @@ export default function OrderDetail() {
               apiKey: import.meta.env.VITE_SUPABASE_SERVICE_ROLE,
             }),
           })
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}))
+            toast(err.error || 'Email notification failed', 'warning')
+          }
         } catch (e) {
-          console.error('Failed to send notification email:', e)
+          toast('Email notification request failed', 'warning')
         }
       }
     },
