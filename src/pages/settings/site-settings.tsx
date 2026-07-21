@@ -13,7 +13,7 @@ export default function SiteSettings() {
   const [form, setForm] = useState({
     id: '', store_name: 'Nutyum', store_email: '', store_phone: '', store_address: '',
     gst_number: '', cod_enabled: true, cod_charge: '' as string | number,
-    maintenance_mode: false, social_links: '{}',
+    maintenance_mode: false, low_stock_threshold: 5, social_links: '{}',
   })
 
   const { data: settings, isLoading } = useQuery({
@@ -36,6 +36,7 @@ export default function SiteSettings() {
         cod_enabled: settings.cod_enabled ?? true,
         cod_charge: settings.cod_charge || 0,
         maintenance_mode: settings.maintenance_mode || false,
+        low_stock_threshold: settings.low_stock_threshold ?? 5,
         social_links: typeof settings.social_links === 'string' ? settings.social_links : JSON.stringify(settings.social_links || {}),
       })
     }
@@ -94,6 +95,7 @@ export default function SiteSettings() {
         <h2 className="text-sm font-semibold text-[#173D22]">Checkout Settings</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input label="COD Charge (₹)" type="number" min={0} value={form.cod_charge} onChange={e => update('cod_charge', e.target.value)} />
+          <Input label="Low Stock Threshold" type="number" min={0} value={form.low_stock_threshold} onChange={e => update('low_stock_threshold', Number(e.target.value))} />
         </div>
         <label className="flex items-center gap-2 text-sm text-[#173D22]">
           <input type="checkbox" checked={form.cod_enabled} onChange={e => update('cod_enabled', e.target.checked)} className="rounded border-[rgba(23,61,34,0.3)]" />
