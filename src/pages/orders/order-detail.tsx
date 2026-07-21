@@ -10,6 +10,8 @@ import { CardSkeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
 import { ArrowLeft, Package } from 'lucide-react'
 
+const NOTIFY_API = `${import.meta.env.VITE_SITE_URL || 'https://nutyum.in'}/api/orders/notify`
+
 const statusOptions = [
   { value: 'placed', label: 'Placed' },
   { value: 'confirmed', label: 'Confirmed' },
@@ -81,9 +83,24 @@ export default function OrderDetail() {
         if (logErr) console.error('Failed to log status change:', logErr)
       }
     },
-    onSuccess: () => {
+    onSuccess: async (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['order', id] })
       toast('Order updated', 'success')
+      if (status === 'shipped' || status === 'out_for_delivery') {
+        try {
+          await fetch(NOTIFY_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              orderId: id,
+              status,
+              apiKey: import.meta.env.VITE_SUPABASE_SERVICE_ROLE,
+            }),
+          })
+        } catch (e) {
+          console.error('Failed to send notification email:', e)
+        }
+      }
     },
     onError: () => toast('Failed to update order', 'error'),
   })
