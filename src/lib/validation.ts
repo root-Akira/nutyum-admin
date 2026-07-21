@@ -37,11 +37,9 @@ export const siteSettingsSchema = z.object({
   store_email: z.string().email('Invalid email').or(z.literal('')),
   store_phone: z.string().optional(),
   store_address: z.string().optional(),
-  currency: z.string().min(1, 'Currency is required'),
   gst_number: z.string().optional(),
   cod_enabled: z.boolean(),
   cod_charge: z.coerce.number().min(0, 'COD charge must be 0 or more'),
   maintenance_mode: z.boolean(),
-  low_stock_threshold: z.coerce.number().int().min(0),
   social_links: z.string(),
 })
