@@ -17,7 +17,6 @@ const titles: Record<string, string> = {
   '/coupons': 'Coupons',
   '/cms/categories': 'Categories',
   '/cms/vibes': 'Vibes',
-  '/cms/pages': 'CMS Pages',
   '/settings/shipping': 'Shipping Settings',
   '/settings/payments': 'Payment Settings',
   '/settings/site': 'Site Settings',
@@ -32,7 +31,6 @@ export function DashboardLayout({ onSignOut }: DashboardLayoutProps) {
   const isCouponForm = pathname.startsWith('/coupons/') && pathname !== '/coupons'
   const isOrderDetail = pathname.startsWith('/orders/') && pathname !== '/orders'
   const isCustomerDetail = pathname.startsWith('/customers/') && pathname !== '/customers'
-  const isPageEdit = pathname.startsWith('/cms/pages/')
 
   let title = titles[pathname]
   if (isProductForm) title = pathname.includes('/new') ? 'Add Product' : 'Edit Product'
@@ -40,7 +38,6 @@ export function DashboardLayout({ onSignOut }: DashboardLayoutProps) {
   else if (isCouponForm) title = pathname.includes('/new') ? 'Add Coupon' : 'Edit Coupon'
   else if (isOrderDetail) title = 'Order Detail'
   else if (isCustomerDetail) title = 'Customer Detail'
-  else if (isPageEdit) title = 'Edit Page'
   else if (!title) title = 'Dashboard'
 
   return (
