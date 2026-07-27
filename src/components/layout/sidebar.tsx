@@ -51,7 +51,7 @@ export function Sidebar({ onSignOut, open, onClose }: SidebarProps) {
         } lg:translate-x-0`}
       >
         <div className="flex flex-col items-center gap-1 px-5 py-4 border-b border-[rgba(255,255,255,0.1)] shrink-0">
-          <img src="/main%20logo.png" alt="Nutyum" className="w-full max-w-[140px] h-auto object-contain" />
+          <img src="/main%20logo.png" alt="Nutyum" className="w-full max-w-[200px] h-auto object-contain" />
           <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[rgba(255,255,255,0.45)]">Admin Panel</span>
         </div>
 
