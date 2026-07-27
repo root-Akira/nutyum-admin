@@ -99,10 +99,10 @@ export default function OrderDetail() {
           })
           if (!res.ok) {
             const err = await res.json().catch(() => ({}))
-            toast(err.error || 'Email notification failed', 'warning')
+            toast(err.error || 'Email notification failed', 'info')
           }
         } catch (e) {
-          toast('Email notification request failed', 'warning')
+          toast('Email notification request failed', 'info')
         }
       }
     },
