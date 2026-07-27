@@ -89,7 +89,14 @@ export default function OrderList() {
                 <TableCell className="text-sm">{order.shipping_address?.name || '—'}</TableCell>
                 <TableCell className="font-medium">{formatCurrency(order.total)}</TableCell>
                 <TableCell><StatusBadge status={order.payment_status} /></TableCell>
-                <TableCell><StatusBadge status={order.status} /></TableCell>
+                <TableCell>
+                  <StatusBadge status={order.status} />
+                  {order.status === 'cancelled' && order.cancellation_reason && (
+                    <span className="block text-[10px] text-red-400 mt-0.5 max-w-[140px] truncate">
+                      {order.cancellation_reason}
+                    </span>
+                  )}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

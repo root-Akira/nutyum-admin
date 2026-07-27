@@ -127,6 +127,19 @@ export default function OrderDetail() {
         <StatusBadge status={order.status} />
       </div>
 
+      {order.status === 'cancelled' && (
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4">
+          <p className="text-sm font-medium text-red-700">
+            Cancelled — {order.cancellation_reason || 'Reason not recorded'}
+          </p>
+          {!order.cancellation_reason && order.notes && (
+            <p className="mt-1 text-xs text-red-500">
+              See Notes field for original cancellation details.
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="space-y-6">
         <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-5">
           <h3 className="text-sm font-semibold text-[#173D22] mb-3">Order Items</h3>
@@ -204,10 +217,13 @@ export default function OrderDetail() {
             <div className="space-y-2">
               {statusLog.map((log) => (
                 <div key={log.id} className="flex items-center justify-between text-sm py-1.5 border-b border-[rgba(23,61,34,0.04)] last:border-0">
-                  <div className="flex items-center gap-2">
-                    <StatusBadge status={log.from_status} />
-                    <span className="text-[#4C5A48]">&rarr;</span>
-                    <StatusBadge status={log.to_status} />
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={log.from_status} />
+                      <span className="text-[#4C5A48]">&rarr;</span>
+                      <StatusBadge status={log.to_status} />
+                    </div>
+                    {log.note && <p className="text-xs text-[#4C5A48] mt-0.5 max-w-[300px] truncate">{log.note}</p>}
                   </div>
                   <span className="text-xs text-[#4C5A48]">{formatDateTime(log.changed_at)}</span>
                 </div>
