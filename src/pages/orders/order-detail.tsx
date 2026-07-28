@@ -23,6 +23,26 @@ const statusOptions = [
   { value: 'returned', label: 'Returned' },
 ]
 
+interface ParsedAddress {
+  recipient_name?: string
+  name?: string
+  phone?: string
+  line1?: string
+  line2?: string
+  city?: string
+  state?: string
+  pincode?: string
+}
+
+function parseAddress(raw: unknown): ParsedAddress {
+  try {
+    const obj = typeof raw === 'string' ? JSON.parse(raw) : raw
+    return (obj as ParsedAddress) || {}
+  } catch {
+    return {}
+  }
+}
+
 export default function OrderDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -161,7 +181,7 @@ export default function OrderDetail() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-[#4C5A48]">x{item.quantity}</p>
-                  <p className="text-sm font-medium text-[#173D22]">{formatCurrency(item.total)}</p>
+                  <p className="text-sm font-medium text-[#173D22]">{formatCurrency(item.total || item.price * item.quantity)}</p>
                 </div>
               </div>
             ))}
@@ -188,15 +208,20 @@ export default function OrderDetail() {
           </div>
         </div>
 
-        {order.shipping_address && (
-          <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-5">
-            <h3 className="text-sm font-semibold text-[#173D22] mb-3">Shipping Address</h3>
-            <p className="text-sm text-[#173D22]">{order.shipping_address.name}</p>
-            <p className="text-sm text-[#4C5A48]">{order.shipping_address.phone}</p>
-            <p className="text-sm text-[#4C5A48]">{order.shipping_address.street}</p>
-            <p className="text-sm text-[#4C5A48]">{order.shipping_address.city}, {order.shipping_address.state} — {order.shipping_address.pincode}</p>
-          </div>
-        )}
+        {order.shipping_address && (() => {
+          const addr = parseAddress(order.shipping_address)
+          if (!addr || Object.keys(addr).length === 0) return null
+          const street = [addr.line1, addr.line2].filter(Boolean).join(', ')
+          return (
+            <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-5">
+              <h3 className="text-sm font-semibold text-[#173D22] mb-3">Shipping Address</h3>
+              <p className="text-sm text-[#173D22]">{addr.recipient_name || addr.name || ''}</p>
+              <p className="text-sm text-[#4C5A48]">{addr.phone || ''}</p>
+              {street && <p className="text-sm text-[#4C5A48]">{street}</p>}
+              <p className="text-sm text-[#4C5A48]">{addr.city || ''}, {addr.state || ''} — {addr.pincode || ''}</p>
+            </div>
+          )
+        })()}
 
         <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-5 space-y-4">
           <h3 className="text-sm font-semibold text-[#173D22]">Update Order</h3>

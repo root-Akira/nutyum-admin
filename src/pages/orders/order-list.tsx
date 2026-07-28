@@ -8,6 +8,18 @@ import { StatusBadge } from '@/components/ui/badge'
 import { TableSkeleton } from '@/components/ui/skeleton'
 import { Search } from 'lucide-react'
 
+function getCustomerName(order: Record<string, unknown>): string {
+  try {
+    const addr: Record<string, unknown> =
+      typeof order.shipping_address === 'string'
+        ? JSON.parse(order.shipping_address)
+        : (order.shipping_address as Record<string, unknown>)
+    return (addr?.recipient_name as string) || (addr?.name as string) || '—'
+  } catch {
+    return '—'
+  }
+}
+
 export default function OrderList() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -86,7 +98,7 @@ export default function OrderList() {
                   </Link>
                 </TableCell>
                 <TableCell className="text-xs text-[#4C5A48]">{formatDateTime(order.created_at)}</TableCell>
-                <TableCell className="text-sm">{order.shipping_address?.name || '—'}</TableCell>
+                <TableCell className="text-sm">{getCustomerName(order)}</TableCell>
                 <TableCell className="font-medium">{formatCurrency(order.total)}</TableCell>
                 <TableCell><StatusBadge status={order.payment_status} /></TableCell>
                 <TableCell>
