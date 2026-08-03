@@ -292,7 +292,7 @@ export default function OrderDetail() {
             <Select label="Status" options={statusOptions} value={status || order.status} onChange={e => setStatus(e.target.value)} />
             <Input label="Courier" value={courier || order.courier || ''} onChange={e => setCourier(e.target.value)} />
             <div className="sm:col-span-2">
-              <Input label="Tracking Number" value={tracking || order.tracking_number || ''} onChange={e => setTracking(e.target.value)} />
+              <Input label="Tracking Number" placeholder="Tracking ID or full courier tracking URL" value={tracking || order.tracking_number || ''} onChange={e => setTracking(e.target.value)} />
             </div>
           </div>
           <Textarea label="Internal Notes" value={notes || order.notes || ''} onChange={e => setNotes(e.target.value)} rows={2} />
