@@ -23,6 +23,12 @@ const statusOptions = [
   { value: 'returned', label: 'Returned' },
 ]
 
+const paymentStatusOptions = [
+  { value: 'pending', label: 'Pending' },
+  { value: 'paid', label: 'Paid' },
+  { value: 'failed', label: 'Failed' },
+]
+
 interface ParsedAddress {
   recipient_name?: string
   name?: string
@@ -52,6 +58,7 @@ export default function OrderDetail() {
   const [tracking, setTracking] = useState('')
   const [courier, setCourier] = useState('')
   const [notes, setNotes] = useState('')
+  const [paymentStatus, setPaymentStatus] = useState('')
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['order', id],
@@ -104,6 +111,29 @@ export default function OrderDetail() {
       }
     },
     onSuccess: async () => {
+      if (paymentStatus && paymentStatus !== order?.payment_status) {
+        try {
+          const res = await fetch(
+            `${import.meta.env.VITE_SITE_URL || 'https://nutyum.in'}/api/orders/${id}/payment-status`,
+            {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                paymentStatus,
+                apiKey: import.meta.env.VITE_SUPABASE_SERVICE_ROLE,
+              }),
+            }
+          )
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}))
+            toast(err.error || 'Payment status update failed', 'info')
+            return
+          }
+        } catch (e) {
+          toast('Payment status update request failed', 'info')
+          return
+        }
+      }
       queryClient.invalidateQueries({ queryKey: ['order', id] })
       toast('Order updated', 'success')
       if (status === 'shipped' || status === 'out_for_delivery') {
@@ -222,6 +252,39 @@ export default function OrderDetail() {
             </div>
           )
         })()}
+
+        <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-5 space-y-4">
+          <h3 className="text-sm font-semibold text-[#173D22]">Payment</h3>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs text-[#4C5A48]">Method</p>
+              <p className="text-sm font-medium text-[#173D22] uppercase">
+                {order.payment_method === 'cod' ? 'Cash on Delivery' : order.payment_method === 'razorpay' ? 'Razorpay (Online)' : '—'}
+              </p>
+            </div>
+            <div className="w-full max-w-[220px]">
+              {order.payment_method === 'cod' ? (
+                <Select
+                  label="Payment Status"
+                  options={paymentStatusOptions}
+                  value={paymentStatus || order.payment_status || 'pending'}
+                  onChange={e => setPaymentStatus(e.target.value)}
+                />
+              ) : (
+                <div>
+                  <p className="text-xs text-[#4C5A48] mb-1.5">Payment Status</p>
+                  <StatusBadge status={order.payment_status || 'paid'} />
+                </div>
+              )}
+            </div>
+          </div>
+          {order.payment_method === 'cod' && (
+            <p className="text-xs text-[#4C5A48]">Mark as Paid once you collect payment on delivery.</p>
+          )}
+          {order.payment_method === 'razorpay' && (
+            <p className="text-xs text-[#4C5A48]">Online payment — captured at checkout, not editable.</p>
+          )}
+        </div>
 
         <div className="rounded-xl border border-[rgba(23,61,34,0.08)] bg-[#FFFEFB] p-5 space-y-4">
           <h3 className="text-sm font-semibold text-[#173D22]">Update Order</h3>
